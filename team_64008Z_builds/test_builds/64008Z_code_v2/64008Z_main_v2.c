@@ -1,7 +1,3 @@
-///Test code
-///
-
-/*Sensors*/
 #pragma config(Sensor, in1,    gyro,           	sensorGyro)
 #pragma config(Sensor, in2,    accelX,         	sensorAccelerometer)
 #pragma config(Sensor, in3,    accelY,         	sensorAccelerometer)
@@ -15,9 +11,9 @@
 #pragma config(Motor,  port4,  frontLeftMotor, 	tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port5,  backLeftMotor, 	tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port6,  coneArmTopR, 	  tmotorVex393_MC29, openLoop, reversed)
-#pragma config(Motor,  port6,  coneArmBottomR, 	tmotorVex393_MC29, openLoop, reversed)
-#pragma config(Motor,  port7,  coneArmTopL,  	  tmotorVex393_MC29, openLoop)
-#pragma config(Motor,  port8,  coneArmBottomL, 	tmotorVex393_MC29, openLoop)
+#pragma config(Motor,  port7,  coneArmBottomR, 	tmotorVex393_MC29, openLoop, reversed)
+#pragma config(Motor,  port8,  coneArmTopL,  	  tmotorVex393_MC29, openLoop)
+#pragma config(Motor,  port9,  coneArmBottomL, 	tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port10,  handMotors,     tmotorVex393_HBridge, openLoop)
 
 /*Compo Init*/
@@ -35,9 +31,9 @@
 ///initialize the gyroscope
 void gyroInit () {
 	SensorType[gyro] = sensorNone;
-	Wait1Msec(1000);
+	wait1Msec(1000);
 	SensorType[gyro] = sensorGyro;
-	Wait1Msec(2000);
+	wait1Msec(2000);
 	//SensorScale[Gyro] = 260;
 	SensorValue[gyro] = 0;
 	SensorFullCount[gyro] = 3600;
@@ -97,13 +93,38 @@ void rotateUntilDegrees(float degrees, int speed, float mod=1) {
   setLeftRightMoveSpeed(speed, -speed);
 
   if (degrees > 0) {
-    WaitUntil(abs(SensorValue[gyro]) >= degrees - mod);
+    waitUntil(abs(SensorValue[gyro]) >= degrees - mod);
   }
   else {
-    WaitUntil(abs(SensorValue[gyro]) <= degrees + mod);
+    waitUntil(abs(SensorValue[gyro]) <= degrees + mod);
   }
 
   setLeftRightMoveSpeed();
+}
+
+void pullBack () {
+  //small jolt
+	moveLeftRightFor(150, -127, -127);
+	Wait1Msec(150);
+
+  //small jolt
+	moveLeftRightFor(150, -127, -127);
+	Wait1Msec(150);
+
+  //large pull
+	moveLeftRightFor(1500, -127, -127);
+	Wait1Msec(150);
+
+  //large pull
+	moveLeftRightFor(1500, -127, -127);
+  Wait1Msec(150);
+
+  //large pull
+	moveLeftRightFor(1500, -127, -127);
+  Wait1Msec(150);
+
+  //large pull
+	moveLeftRightFor(3000, -127, -127);
 }
 
 ///runs autonomous
@@ -131,31 +152,6 @@ void runAuto() {
 
 	/*Move Away From Goal.*/
   pullBack();
-}
-
-void pullBack () {
-  //small jolt
-	moveLeftRightFor(150, -127, -127);
-	Wait1Msec(150);
-
-  //small jolt
-	moveLeftRightFor(150, -127, -127);
-	Wait1Msec(150);
-
-  //large pull
-	moveLeftRightFor(1500, -127, -127);
-	Wait1Msec(150);
-
-  //large pull
-	moveLeftRightFor(1500, -127, -127);
-  Wait1Msec(150);
-
-  //large pull
-	moveLeftRightFor(1500, -127, -127);
-  Wait1Msec(150);
-
-  //large pull
-	moveLeftRightFor(3000, -127, -127);
 }
 
 void pre_auton() {
