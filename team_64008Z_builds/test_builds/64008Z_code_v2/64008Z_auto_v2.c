@@ -37,7 +37,7 @@ void rotateUntilDegrees(float degrees, int speed, float mod=1) {
   else {
     WaitUntil(abs(SensorValue[gyro]) <= degrees + mod);
   }
-  
+
   setLeftRightMoveSpeed();
 }
 
