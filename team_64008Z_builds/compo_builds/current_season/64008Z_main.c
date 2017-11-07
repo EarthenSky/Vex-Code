@@ -1,6 +1,3 @@
-///This code was used for the 11/4/2017 vex compo.
-///
-
 #pragma config(Sensor, in1,    gyro,           sensorGyro)
 #pragma config(Sensor, in2,    accelX,         sensorAccelerometer)
 #pragma config(Sensor, in3,    accelY,         sensorAccelerometer)

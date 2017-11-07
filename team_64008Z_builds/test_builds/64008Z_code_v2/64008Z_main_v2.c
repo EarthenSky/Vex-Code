@@ -1,3 +1,21 @@
+#pragma config(Sensor, in1,    gyro,           sensorGyro)
+#pragma config(Sensor, in2,    accelX,         sensorAccelerometer)
+#pragma config(Sensor, in3,    accelY,         sensorAccelerometer)
+#pragma config(Sensor, dgtl1,  enc1,           sensorQuadEncoder)
+#pragma config(Sensor, dgtl3,  enc2,           sensorQuadEncoder)
+#pragma config(Sensor, dgtl5,  handsUp,        sensorTouch)
+#pragma config(Sensor, dgtl6,  handsDown,      sensorTouch)
+#pragma config(Motor,  port2,           handMotors,    tmotorVex393_MC29, openLoop)
+#pragma config(Motor,  port3,           clawMotor,     tmotorVex393_MC29, openLoop)
+#pragma config(Motor,  port4,           frontRightMotor, tmotorVex393_MC29, openLoop, reversed)
+#pragma config(Motor,  port5,           backRightMotor, tmotorVex393_MC29, openLoop, reversed)
+#pragma config(Motor,  port6,           frontLeftMotor, tmotorVex393_MC29, openLoop)
+#pragma config(Motor,  port7,           backLeftMotor, tmotorVex393_MC29, openLoop)
+#pragma config(Motor,  port8,           coneArmsRight, tmotorVex393_MC29, openLoop, reversed)
+#pragma config(Motor,  port9,           coneArmsLeft,  tmotorVex393_MC29, openLoop)
+#pragma config(Motor,  port10,          coneArmsLeft2, tmotorVex393_HBridge, openLoop)
+
+/*
 #pragma config(Sensor, in1,    gyro,           	sensorGyro)
 #pragma config(Sensor, in2,    accelX,         	sensorAccelerometer)
 #pragma config(Sensor, in3,    accelY,         	sensorAccelerometer)
@@ -15,6 +33,7 @@
 #pragma config(Motor,  port8,  coneArmTopL,  	  tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port9,  coneArmBottomL, 	tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port10,  handMotors,     tmotorVex393_HBridge, openLoop)
+*/
 
 /*Compo Init*/
 #pragma platform(VEX);
@@ -26,7 +45,7 @@
 #include "Vex_Competition_Includes.c" //backcode no modify pls.
 
 /*Other Scripts*/
-#include "64008Z_auto_v2.c" //autonomous code.
+//#include "64008Z_auto_v2.c" //autonomous code.
 
 ///initialize the gyroscope
 void gyroInit () {
@@ -51,13 +70,21 @@ void setLeftRightMoveSpeed(int leftSpeed=0, int rightSpeed=0) {
 
 ///sets cone pickup speed.  Empty is not moving.
 void setConePickUpSpeed (int val=0) {
+	motor[coneArmsLeft] = val;
+	motor[coneArmsLeft2] = val;
+	motor[coneArmsRight] = val;
+}
+
+/*
+///sets cone pickup speed.  Empty is not moving.
+void setConePickUpSpeed (int val=0) {
 	//left side
 	motor[coneArmTopL] = val;
 	motor[coneArmBottomL] = val;
 	//right side
 	motor[coneArmTopR] = val;
 	motor[coneArmBottomR] = val;
-}
+}*/
 
 ///holds autonomous commands and main function.
 ///
@@ -163,15 +190,23 @@ task autonomous	{
 }
 
 bool isHoldingClaw = false;
+bool isGoalArmMovingDown = false;
 task usercontrol {
 	while(true)
 	{
 		/*Goal Arm*/
-		if(vexRT[Btn8R] == 1 && SensorValue[handsUp] == 0)	{
-			motor[handMotors] = 127;
+		if(vexRT[Btn8R] == 1)	{
+			isGoalArmMovingDown = true;
 		}
-		else if (vexRT[Btn8D] == 1 && SensorValue[handsDown] == 0) {
+		else if (vexRT[Btn8D] == 1 ) {
+			isGoalArmMovingDown = false;
+		}
+
+		if(isGoalArmMovingDown == true && SensorValue[handsDown] == 0) {
 			motor[handMotors] = -127;
+		}
+		else if (isGoalArmMovingDown == false && SensorValue[handsUp] == 0){
+			motor[handMotors] = 127;
 		}
 		else {
 			motor[handMotors] = 0;
@@ -191,16 +226,16 @@ task usercontrol {
 		/*Claws*/
 		if(vexRT[Btn6D] == 1)	{
 			motor[clawMotor] = 127;
-			isHoldingClaw = true;
+			isHoldingClaw = false;
 		}
 		else if (vexRT[Btn5D] == 1) {
 			motor[clawMotor] = -127;
-			isHoldingClaw = false;
+			isHoldingClaw = true;
 		}
 		else {
 			//keeps pressure on the cone when picked up.
 			if(isHoldingClaw == true) {
-				motor[clawMotor] = 40;  //TODO: change value down if pressure is too much.
+				motor[clawMotor] = -20;  //TODO: change value down or up if pressure is wrong.
 			}
 			else {
 				motor[clawMotor] = 0;
