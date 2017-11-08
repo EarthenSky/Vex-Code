@@ -115,6 +115,10 @@ void moveLeftRightFor(int time, int leftSpeed, int rightSpeed) {
 	motor[backRightMotor] = 0;
 }
 
+void moveForRotations(float rotations) {
+
+}
+
 //rotates until over a certain gyro value.  //TODO: remove mod?
 void rotateUntilDegrees(float degrees, int speed, float mod=1) {
   setLeftRightMoveSpeed(speed, -speed);
