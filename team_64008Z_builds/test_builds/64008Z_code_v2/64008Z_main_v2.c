@@ -35,6 +35,8 @@
 #pragma config(Motor,  port10,  handMotors,     tmotorVex393_HBridge, openLoop)
 */
 
+//warning code is very slightly agressive.
+
 /*Compo Init*/
 #pragma platform(VEX);
 
@@ -55,7 +57,7 @@ void gyroInit () {
 	wait1Msec(2000);
 	//SensorScale[Gyro] = 260;
 	SensorValue[gyro] = 0;
-	SensorFullCount[gyro] = 3600;
+	SensorFullCount[gyro] = 36000;
 }
 
 ///sets the speed of the left and right sides of the drive.  Empty is not moving.
@@ -115,14 +117,39 @@ void moveLeftRightFor(int time, int leftSpeed, int rightSpeed) {
 	motor[backRightMotor] = 0;
 }
 
-void moveForRotations(float rotations) {
+float wheelRadius = 4 * 3.1415926535897932; //in inches.  (thats right, I memorized that many...)
+void moveInches(float value) {
 
+}
+
+void moveRotations(float rotations, int speed=100, int converter=5/*TODO: tune this */) {
+	bool doneLoop = false;
+
+	float error = 0;
+	float rMod = 0;
+
+	SensorValue[encL] = 0;
+	SensorValue[encR] = 0;
+
+	while(doneLoop == true) {
+		error = SensorValue[encL] - SensorValue[encR];  //set offset value, if 0 both are moveing at same speed.
+
+		rMod += error / converter; //create mod.
+
+		setLeftRightMoveSpeed(speed, speed + rMod);  //applies the modifier.
+
+		if ((SensorValue[encL] + SensorValue[encR]) / 2 >= (rotations * 360)) { doneLoop == true; }  //main loop exit.
+		wait1Msec(20);  //20ms polling time.
+	}
+
+	setLeftRightMoveSpeed(); //turn off motors.
 }
 
 //rotates until over a certain gyro value.  //TODO: remove mod?
 void rotateUntilDegrees(float degrees, int speed, float mod=1) {
   setLeftRightMoveSpeed(speed, -speed);
 
+	//check if over degrees.
   if (degrees > 0) {
     waitUntil(abs(SensorValue[gyro]) >= degrees - mod);
   }
@@ -131,6 +158,89 @@ void rotateUntilDegrees(float degrees, int speed, float mod=1) {
   }
 
   setLeftRightMoveSpeed();
+}
+
+// **GYRO TURN**
+// target (in degrees) is added/subtracted from current gyro reading to get a target gyro reading
+// run PD loop to turn to target
+// checks if target has been reached AND is at target for over 250ms before moving on
+void gyroTurn (int turnDirection, int targetDegrees, int maxPower=87, int minPower=22, int timeOut=3000) {
+	// initialize PD loop variables
+	float kp = 0.33; // TO BE TUNED
+	int error = targetDegrees;
+	int drivePower = 0;
+
+	clearTimer(T2);
+
+	// finish check variables
+	bool atTarget = false;
+
+	// initialize gyro data variables
+	int targetReading = SensorValue[gyro];
+
+	// get gyroscope target reading
+	if (turnDirection >= 1)
+		targetReading += targetDegrees;
+	else if (turnDirection <= 0)
+		targetReading -= targetDegrees;
+
+	// change kp if target is under 20 degree threshold
+	if (targetDegrees < 200) { kp = 0.4; }  //ok?
+
+	// run motors until target is within 1/10 degree certainty
+	while (!atTarget && (time1[T2] < timeOut))
+	{
+		error = targetReading - SensorValue[gyro]; 	// calculate error
+		drivePower = error * kp;	// calculate PD loop output
+
+		//keep speed between min and max power.
+		if(drivePower < minPower && drivePower > 0)  {
+			drivePower = minPower;
+		}
+		else {
+			if(drivePower > -minPower && drivePower < 0)  {
+				drivePower = -minPower;
+			}
+		}
+
+		if(drivePower > maxPower)  {
+			drivePower = maxPower;
+		}
+		else {
+			if(drivePower < -maxPower)  {
+				drivePower = -maxPower;
+			}
+		}
+
+		//send power to motors.
+		setLeftRightMoveSpeed(drivePower, -drivePower);
+
+		// check for finish
+		if (abs(error) > 10) 	// if robot is within 1 degree of target and timer flag is off
+			clearTimer(T1);			// start a timer
+
+		if (time1(T1) > 200)	// if the timer is over 250ms and timer flag is true
+			atTarget = true;	// set boolean to complete while loop
+	}
+
+	setLeftRightMoveSpeed(); //reset motors.
+
+	// reset kp
+	kp = 0.3;
+}
+
+//value is in inches.
+//precision is for how accurate the value is going to be.  More accurate -> longer time to get value.
+float getRFDistance (int precision=5, int pollingTime=20) {
+	float sumDistances = 0;  //holds all of the distances from the rangefinder.
+
+	for (int i = 0; i < precision; i++;) {
+		sumDistances += SensorValue[urf];  //fetch!  Good boy!
+
+		wait1Msec(pollingTime);  //longer pollingTime means longer to get values.  Too quick and cortex cant keep up / gives same number.  Sensor polling is 3ms.
+	}
+
+	return sumDistances / precision;
 }
 
 void pullBack () {
@@ -159,7 +269,7 @@ void pullBack () {
 }
 
 ///runs autonomous
-void runAuto() {
+void runAutoDeprecated() {
   /*Drop Goal*/
 	autoMoveGoalArms(-127);
 
@@ -173,7 +283,7 @@ void runAuto() {
 	moveLeftRightFor(2200, -70, -70);
 
 	/*Rotate ~ >180 Degrees*/
-  rotateUntilDegrees(18 * 7.5, 110);
+  rotateUntilDegrees(180 * 7.5, 110);
 
 	/*Move to Place Goal*/
 	moveLeftRightFor(1500, 100, 100);
@@ -183,6 +293,10 @@ void runAuto() {
 
 	/*Move Away From Goal.*/
   pullBack();
+}
+
+void runAuto() {
+
 }
 
 void pre_auton() {
@@ -245,6 +359,15 @@ task usercontrol {
 				motor[clawMotor] = 0;
 			}
 		}
+
+		if(vexRT[Btn7U] == 1)	{
+			gyroTurn(1, 180);  //turn 180 degrees.
+		}
+
+		if(vexRT[Btn7D] == 1)	{
+			moveRotations(5)  //move 5 rotations.
+		}
+
 
 		/*Tank Drive*/
 		setLeftRightMoveSpeed(vexRT[Ch3], vexRT[Ch2]);
