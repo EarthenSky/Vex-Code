@@ -119,7 +119,7 @@ void moveLeftRightFor(int time, int leftSpeed, int rightSpeed) {
 
 float wheelRadius = 4 * 3.1415926535897932; //in inches.  (thats right, I memorized that many...)
 void moveInches(float value) {
-
+	moveRotations(value / wheelRadius);  //converts inches to rotations.
 }
 
 void moveRotations(float rotations, int speed=100, int converter=5/*TODO: tune this */) {
@@ -146,7 +146,7 @@ void moveRotations(float rotations, int speed=100, int converter=5/*TODO: tune t
 }
 
 //rotates until over a certain gyro value.  //TODO: remove mod?
-void rotateUntilDegrees(float degrees, int speed, float mod=1) {
+void rotateUntilDegrees(float degrees, int speed, float mod=2) {
   setLeftRightMoveSpeed(speed, -speed);
 
 	//check if over degrees.
@@ -156,6 +156,8 @@ void rotateUntilDegrees(float degrees, int speed, float mod=1) {
   else {
     waitUntil(abs(SensorValue[gyro]) <= degrees + mod);
   }
+	setLeftRightMoveSpeed(speed, -speed);
+	wait1Msec(40);  //2polls
 
   setLeftRightMoveSpeed();
 }
