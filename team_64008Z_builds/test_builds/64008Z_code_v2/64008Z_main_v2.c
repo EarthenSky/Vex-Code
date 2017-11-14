@@ -142,7 +142,7 @@ void moveRotations(float rotations, int speed=100, int converter=5/*TODO: tune t
 	setLeftRightMoveSpeed(); //turn off motors.
 }
 
-float wheelRadius = 4 * 3.1415926535897932; //in inches.  (thats right, I memorized that many...)
+float wheelRadius = 4 * 3.1415926535897932; //in inches.  (that's right, I memorized that many characters...)
 void moveInches(float value) {
 	moveRotations(value / wheelRadius);  //converts inches to rotations.
 }
@@ -300,7 +300,12 @@ void runAutoDeprecated() {
 }
 
 void runAuto() {
+	/*Drop Goal Arms*/
+	autoMoveGoalArms(-127);
 
+	/*Move Forwards One Rotation*/
+
+	/*Rotate Towards */
 }
 
 void pre_auton() {
