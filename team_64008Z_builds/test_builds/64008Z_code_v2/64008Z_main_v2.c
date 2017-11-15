@@ -1,17 +1,19 @@
+#pragma config(I2C_Usage, I2C1, i2cSensors)
 #pragma config(Sensor, in1,    gyro,           sensorGyro)
 #pragma config(Sensor, in2,    accelX,         sensorAccelerometer)
 #pragma config(Sensor, in3,    accelY,         sensorAccelerometer)
-#pragma config(Sensor, dgtl1,  encL,           sensorQuadEncoder)
-#pragma config(Sensor, dgtl3,  encR,           sensorQuadEncoder)
+#pragma config(Sensor, dgtl1,  encArm,         sensorQuadEncoder)
 #pragma config(Sensor, dgtl5,  handsUp,        sensorTouch)
 #pragma config(Sensor, dgtl6,  handsDown,      sensorTouch)
 #pragma config(Sensor, dgtl8,  urfOut,         sensorSONAR_inch)
+#pragma config(Sensor, I2C_1,  ,               sensorQuadEncoderOnI2CPort,    , AutoAssign )
+#pragma config(Sensor, I2C_2,  ,               sensorQuadEncoderOnI2CPort,    , AutoAssign )
 #pragma config(Motor,  port2,           handMotors,    tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port3,           clawMotor,     tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port4,           frontRightMotor, tmotorVex393_MC29, openLoop, reversed)
-#pragma config(Motor,  port5,           backRightMotor, tmotorVex393_MC29, openLoop, reversed)
+#pragma config(Motor,  port5,           backRightMotor, tmotorVex393HighSpeed_MC29, openLoop, encoderPort, I2C_2)
 #pragma config(Motor,  port6,           frontLeftMotor, tmotorVex393_MC29, openLoop)
-#pragma config(Motor,  port7,           backLeftMotor, tmotorVex393_MC29, openLoop)
+#pragma config(Motor,  port7,           backLeftMotor, tmotorVex393HighSpeed_MC29, openLoop, encoderPort, I2C_1)
 #pragma config(Motor,  port8,           coneArmsRight, tmotorVex393_MC29, openLoop, reversed)
 #pragma config(Motor,  port9,           coneArmsLeft,  tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port10,          coneArmsLeft2, tmotorVex393_HBridge, openLoop)
@@ -125,17 +127,17 @@ void moveRotations(float rotations, int speed=100, int converter=5/*TODO: tune t
 	float error = 0;
 	float rMod = 0;
 
-	SensorValue[encL] = 0;
-	SensorValue[encR] = 0;
+	nMotorEncoder[backLeftMotor] = 0;
+	nMotorEncoder[backRightMotor] = 0;
 
 	while(doneLoop == true) {
-		error = SensorValue[encL] - SensorValue[encR];  //set offset value, if 0 both are moveing at same speed.
+		error = nMotorEncoder[backLeftMotor] - nMotorEncoder[backRightMotor];  //set offset value, if 0 both are moveing at same speed.
 
 		rMod += error / converter; //create mod.
 
 		setLeftRightMoveSpeed(speed, speed + rMod);  //applies the modifier.
 
-		if ((SensorValue[encL] + SensorValue[encR]) / 2 >= (rotations * 360)) { doneLoop == true; }  //main loop exit.
+		if ((nMotorEncoder[backLeftMotor] + nMotorEncoder[backRightMotor]) / 2 >= (rotations * 360)) { doneLoop = true; }  //main loop exit.
 		wait1Msec(20);  //20ms polling time.
 	}
 
@@ -250,23 +252,23 @@ float getRFDistance (int precision=5, int pollingTime=20) {
 void pullBack () {
   //small jolt
 	moveLeftRightFor(150, -127, -127);
-	Wait1Msec(150);
+	wait1Msec(150);
 
   //small jolt
 	moveLeftRightFor(150, -127, -127);
-	Wait1Msec(150);
+	wait1Msec(150);
 
   //large pull
 	moveLeftRightFor(1500, -127, -127);
-	Wait1Msec(150);
+	wait1Msec(150);
 
   //large pull
 	moveLeftRightFor(1500, -127, -127);
-  Wait1Msec(150);
+  wait1Msec(150);
 
   //large pull
 	moveLeftRightFor(1500, -127, -127);
-  Wait1Msec(150);
+  wait1Msec(150);
 
   //large pull
 	moveLeftRightFor(3000, -127, -127);
