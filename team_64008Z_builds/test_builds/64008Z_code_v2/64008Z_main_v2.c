@@ -95,15 +95,16 @@ void setConePickUpSpeed (int val=0) {
 ///holds autonomous commands and main function.
 ///
 
+///is a task
 ///moves goal arms up or down based on value of direction. (positive or negitave)
-void autoMoveGoalArms(int direction) {
+task autoMoveGoalArms(int direction) {
 	direction > 0 ? motor[handMotors] = 127 : motor[handMotors] = -127;
 	wait1Msec(1250);
 	motor[handMotors] = 0;
 }
 
 ///time is in ms, speeds fromn -127 to 127.
-void moveLeftRightFor(int time, int leftSpeed, int rightSpeed) {
+void moveLeftRightMotorsFor(int time, int leftSpeed, int rightSpeed) {
 	//left side
 	motor[frontLeftMotor] = leftSpeed;
 	motor[backLeftMotor] = leftSpeed;
@@ -121,23 +122,25 @@ void moveLeftRightFor(int time, int leftSpeed, int rightSpeed) {
 	motor[backRightMotor] = 0;
 }
 
-void moveRotations(float rotations, int speed=100, int converter=5/*TODO: tune this */) {
-	bool doneLoop = false;
+//moves straight
+void moveRotations(float rotations, int speed=120) {
+	bool exitLoop = false;
 
+  int kp=5 /*TODO: tune this */
 	float error = 0;
 	float rMod = 0;
 
 	nMotorEncoder[backLeftMotor] = 0;
 	nMotorEncoder[backRightMotor] = 0;
 
-	while(doneLoop == true) {
+	while(exitLoop == true) {
 		error = nMotorEncoder[backLeftMotor] - nMotorEncoder[backRightMotor];  //set offset value, if 0 both are moveing at same speed.
 
-		rMod += error / converter; //create mod.
+		rMod += error / kb; //create mod.
 
 		setLeftRightMoveSpeed(speed, speed + rMod);  //applies the modifier.
 
-		if ((nMotorEncoder[backLeftMotor] + nMotorEncoder[backRightMotor]) / 2 >= (rotations * 360)) { doneLoop = true; }  //main loop exit.
+		if ((nMotorEncoder[backLeftMotor] + nMotorEncoder[backRightMotor]) / 2 >= (rotations * 360)) { exitLoop = true; }  //main loop exit.
 		wait1Msec(20);  //20ms polling time.
 	}
 
@@ -146,7 +149,7 @@ void moveRotations(float rotations, int speed=100, int converter=5/*TODO: tune t
 
 bool hitLine = false;
 task lookForLine() {
-	//set line to not hit.
+	//set hitLine to not have been hit.
 	hitLine = false;
 	while (hitLine == false) {
 		//look for the line.
@@ -171,7 +174,7 @@ void rotateUntilDegrees(float degrees, int speed, float mod=2) {
   else {
     waitUntil(abs(SensorValue[gyro]) <= degrees + mod);
   }
-	setLeftRightMoveSpeed(speed, -speed);
+	setLeftRightMoveSpeed(-speed, speed);
 	wait1Msec(40);  //2polls
 
   setLeftRightMoveSpeed();
@@ -243,7 +246,7 @@ void gyroTurn (int turnDirection, int targetDegrees, int maxPower=87, int minPow
 	setLeftRightMoveSpeed();  //reset motors.
 
 	// reset kp
-	kp = 0.3;
+	kp = 0.33;
 }
 
 //value is in inches.
