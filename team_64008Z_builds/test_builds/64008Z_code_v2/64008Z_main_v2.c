@@ -144,6 +144,17 @@ void moveRotations(float rotations, int speed=100, int converter=5/*TODO: tune t
 	setLeftRightMoveSpeed(); //turn off motors.
 }
 
+bool hitLine = false;
+task lookForLine() {
+	//set line to not hit.
+	hitLine = false;
+	while (hitLine == false) {
+		//look for the line.
+
+		//if found line hitLine = true;
+	}
+}
+
 float wheelRadius = 4 * 3.1415926535897932; //in inches.  (that's right, I memorized that many characters...)
 void moveInches(float value) {
 	moveRotations(value / wheelRadius);  //converts inches to rotations.
