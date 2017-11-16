@@ -39,7 +39,7 @@
 #pragma config(Motor,  port10,  handMotors,     tmotorVex393_HBridge, openLoop)
 */
 
-//warning code is very slightly agressive.
+//warning code is slightly agressive.
 
 /*Compo Init*/
 #pragma platform(VEX);
@@ -54,7 +54,7 @@
 //#include "64008Z_auto_v2.c" //autonomous code.
 
 ///initialize the gyroscope
-void gyroInit () {
+void gyroInit() {
 	SensorType[gyro] = sensorNone;
 	wait1Msec(1000);
 	SensorType[gyro] = sensorGyro;
@@ -122,20 +122,20 @@ void moveLeftRightFor(int time, int leftSpeed, int rightSpeed) {
 	motor[backRightMotor] = 0;
 }
 
-int kp=500; /*TODO: tune this */
-	float error = 0;
-	float rMod = 0;
+int kp = 50; /*TODO: tune this */
+float error = 0;
+float rMod = 0;
 
+float encLVal;
+float encRVal;
 
-	float encLVal;
-	float encRVal;
+int valMod = 0;
+bool exitLoop = false;
 
-	int valMod = 1;
+int calcSpeed = 0;
 
 //moves straight
 void moveRotations(float rotations, float speed=100) {
-	bool exitLoop = false;
-
 	bool isForwards = true;
 
 	nMotorEncoder[backLeftMotor] = 0;
@@ -147,31 +147,35 @@ void moveRotations(float rotations, float speed=100) {
 
 		error = nMotorEncoder[backLeftMotor] - nMotorEncoder[backRightMotor];  //set offset value, if 0 both are moveing at same speed.
 
-		rMod += error / kp; //create mod.
+		rMod += error / kp; //create modifier.
 
-		if (-nMotorEncoder[backLeftMotor] >= (rotations * 360)) {
-			setLeftRightMoveSpeed(-speed / valMod, -(speed + rMod) / valMod);  //applies the modifier.
-			if(isForwards == false) { valMod += 2; } //each change in direction makes speed smaller
+		if (-nMotorEncoder[backLeftMotor] >= (rotations * 360)) {  //back
+			if(isForwards == false) { valMod += 1; } //each change in direction makes speed smaller
 			isForwards = true;
+			setLeftRightMoveSpeed(-speed / valMod, -(speed + rMod) / valMod);  //applies the modifier.
 		}
-		else if (-nMotorEncoder[backLeftMotor] <= (rotations * 360)) {
-			setLeftRightMoveSpeed(speed / valMod, (speed + rMod) / valMod);  //applies the modifier.
-			if(isForwards == true) { valMod += 2; } //each change in direction makes speed smaller
+		else if (-nMotorEncoder[backLeftMotor] <= (rotations * 360)) {  //forwards
+			if(isForwards == true) { valMod += 1; } //each change in direction makes speed smaller
 			isForwards = false;
+			setLeftRightMoveSpeed(speed / valMod, (speed + rMod) / valMod);  //applies the modifier.
+
+			calcSpeed++;  //find ticks
 		}
 
-		if (-nMotorEncoder[backLeftMotor] == (rotations * 360) || speed / valMod <= 5) { //case: loop is done motor is at correct position or speed is too slow.
+		if (-nMotorEncoder[backLeftMotor] == (rotations * 360) || valMod >= 4) { //case: loop is done motor is at correct position or speed is too slow.
 			exitLoop = true; //main loop exit.
+
+			calcSpeed = (nMotorEncoder[backLeftMotor] / degreesPerTick) * 10;  //find avg per second  (*10 is converting ticks to seconds)
 		}
 
-		wait1Msec(20);  //20ms polling time.
+		wait1Msec(100);  //100ms polling time.  No float math if too fast.
 	}
 
 	setLeftRightMoveSpeed(); //turn off motors.
 }
 
 bool hitLine = false;
-task lookForLine() {
+task lookForLine {
 	//set hitLine to not have been hit.
 	hitLine = false;
 	while (hitLine == false) {
@@ -423,7 +427,7 @@ task usercontrol {
 			tempLock = false;
 		}
 		if(vexRT[Btn7D] == 1)	{
-			moveRotations(5);  //move 5 rotations.
+			moveRotations(10);  //move 10 rotations.
 		}
 
 		/*Tank Drive*/
