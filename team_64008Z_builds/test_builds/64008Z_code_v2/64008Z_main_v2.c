@@ -10,10 +10,10 @@
 #pragma config(Sensor, I2C_2,  ,               sensorQuadEncoderOnI2CPort,    , AutoAssign )
 #pragma config(Motor,  port2,           handMotors,    tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port3,           clawMotor,     tmotorVex393_MC29, openLoop)
-#pragma config(Motor,  port4,           frontRightMotor, tmotorVex393_MC29, openLoop, reversed)
+#pragma config(Motor,  port4,           frontRightMotor, tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port5,           backRightMotor, tmotorVex393HighSpeed_MC29, openLoop, encoderPort, I2C_2)
-#pragma config(Motor,  port6,           frontLeftMotor, tmotorVex393_MC29, openLoop)
-#pragma config(Motor,  port7,           backLeftMotor, tmotorVex393HighSpeed_MC29, openLoop, encoderPort, I2C_1)
+#pragma config(Motor,  port6,           frontLeftMotor, tmotorVex393_MC29, openLoop, reversed)
+#pragma config(Motor,  port7,           backLeftMotor, tmotorVex393HighSpeed_MC29, openLoop, reversed, encoderPort, I2C_1)
 #pragma config(Motor,  port8,           coneArmsRight, tmotorVex393_MC29, openLoop, reversed)
 #pragma config(Motor,  port9,           coneArmsLeft,  tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port10,          coneArmsLeft2, tmotorVex393_HBridge, openLoop)
@@ -96,15 +96,15 @@ void setConePickUpSpeed (int val=0) {
 ///
 
 ///is a task
-///moves goal arms up or down based on value of direction. (positive or negitave)
-task autoMoveGoalArms(int direction) {
+///moves goal arms up or down based on value of direction. (positive or negitave) //make task
+void autoMoveGoalArms(int direction) {
 	direction > 0 ? motor[handMotors] = 127 : motor[handMotors] = -127;
 	wait1Msec(1250);
 	motor[handMotors] = 0;
 }
 
 ///time is in ms, speeds fromn -127 to 127.
-void moveLeftRightMotorsFor(int time, int leftSpeed, int rightSpeed) {
+void moveLeftRightFor(int time, int leftSpeed, int rightSpeed) {
 	//left side
 	motor[frontLeftMotor] = leftSpeed;
 	motor[backLeftMotor] = leftSpeed;
@@ -122,25 +122,48 @@ void moveLeftRightMotorsFor(int time, int leftSpeed, int rightSpeed) {
 	motor[backRightMotor] = 0;
 }
 
-//moves straight
-void moveRotations(float rotations, int speed=120) {
-	bool exitLoop = false;
-
-  int kp=5 /*TODO: tune this */
+int kp=500; /*TODO: tune this */
 	float error = 0;
 	float rMod = 0;
+
+
+	float encLVal;
+	float encRVal;
+
+	int valMod = 1;
+
+//moves straight
+void moveRotations(float rotations, float speed=100) {
+	bool exitLoop = false;
+
+	bool isForwards = true;
 
 	nMotorEncoder[backLeftMotor] = 0;
 	nMotorEncoder[backRightMotor] = 0;
 
-	while(exitLoop == true) {
+	while(exitLoop == false) {
+		encLVal = nMotorEncoder[backLeftMotor];
+		encRVal = nMotorEncoder[backRightMotor];
+
 		error = nMotorEncoder[backLeftMotor] - nMotorEncoder[backRightMotor];  //set offset value, if 0 both are moveing at same speed.
 
-		rMod += error / kb; //create mod.
+		rMod += error / kp; //create mod.
 
-		setLeftRightMoveSpeed(speed, speed + rMod);  //applies the modifier.
+		if (-nMotorEncoder[backLeftMotor] >= (rotations * 360)) {
+			setLeftRightMoveSpeed(-speed / valMod, -(speed + rMod) / valMod);  //applies the modifier.
+			if(isForwards == false) { valMod += 2; } //each change in direction makes speed smaller
+			isForwards = true;
+		}
+		else if (-nMotorEncoder[backLeftMotor] <= (rotations * 360)) {
+			setLeftRightMoveSpeed(speed / valMod, (speed + rMod) / valMod);  //applies the modifier.
+			if(isForwards == true) { valMod += 2; } //each change in direction makes speed smaller
+			isForwards = false;
+		}
 
-		if ((nMotorEncoder[backLeftMotor] + nMotorEncoder[backRightMotor]) / 2 >= (rotations * 360)) { exitLoop = true; }  //main loop exit.
+		if (-nMotorEncoder[backLeftMotor] == (rotations * 360) || speed / valMod <= 5) { //case: loop is done motor is at correct position or speed is too slow.
+			exitLoop = true; //main loop exit.
+		}
+
 		wait1Msec(20);  //20ms polling time.
 	}
 
@@ -332,9 +355,14 @@ task autonomous	{
 	runAuto();  //this calls the autonomous script.
 }
 
+
+bool tempLock = false;
+
 bool isHoldingClaw = false;
 bool isGoalArmMovingDown = false;
 task usercontrol {
+	moveRotations(2);
+
 	while(true)
 	{
 		/*Goal Arm*/
@@ -346,10 +374,10 @@ task usercontrol {
 		}
 
 		if(isGoalArmMovingDown == true && SensorValue[handsDown] == 0) {
-			motor[handMotors] = -127;
+			//motor[handMotors] = -127;
 		}
 		else if (isGoalArmMovingDown == false && SensorValue[handsUp] == 0){
-			motor[handMotors] = 127;
+			//motor[handMotors] = 127;
 		}
 		else {
 			motor[handMotors] = 0;
@@ -386,7 +414,13 @@ task usercontrol {
 		}
 
 		if(vexRT[Btn7U] == 1)	{
-			gyroTurn(1, 180);  //turn 180 degrees.
+			if(tempLock = false) {
+				gyroTurn(1, 180);  //turn 180 degrees.
+			}
+			tempLock = true;
+		}
+		else {
+			tempLock = false;
 		}
 		if(vexRT[Btn7D] == 1)	{
 			moveRotations(5);  //move 5 rotations.
