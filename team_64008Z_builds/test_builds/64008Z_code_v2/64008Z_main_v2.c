@@ -153,18 +153,18 @@ void moveRotations(float rotations, float speed=50) {
 		writeDebugStreamLine("The error of (L - R) is %d degrees -> at tick %d", error, currentTick);  //DEBUG: this
 
 		//if both encoders share same value (about) {abs(x/2)*2}, it is moving straight so don't change mod.  //TODO: remove?
-		if (abs(nMotorEncoder[backLeftMotor]/2)*2 != abs(nMotorEncoder[backRightMotor]/2)*2) {
+		if (abs((float)nMotorEncoder[backLeftMotor]/2.0)(int)*2 != abs((float)nMotorEncoder[backRightMotor]/2.0)(int)*2) {
 			rMod += error / kp; //update modifier.
 		}
 		writeDebugStreamLine("The motor modifier of (mod += error[%d] / kp[%d]) is [%d / 127] motor speed -> at tick %d", error, kp, rMod, currentTick);  //DEBUG: this
 
-		if (nMotorEncoder[backLeftMotor] >= (rotations * 360)) {  //moving back
+		if (abs(nMotorEncoder[backLeftMotor]) >= abs(rotations * 360)) {  //moving back
 			if(isForwards == false) { valMod += 1.5; } //each change in direction makes speed smaller
 			isForwards = true;
 
 			setLeftRightMoveSpeed(-speed / valMod, -(speed + rMod) / valMod);  //applies the modifier.
 		}
-		else if (nMotorEncoder[backLeftMotor] <= (rotations * 360)) {  //moving forwards
+		else if (abs(nMotorEncoder[backLeftMotor]) <= abs(rotations * 360)) {  //moving forwards
 			if(isForwards == true) { valMod += 1.5; } //each change in direction makes speed smaller
 			isForwards = false;
 
@@ -173,7 +173,7 @@ void moveRotations(float rotations, float speed=50) {
 			currentTick++;  //DEBUG: find ticks
 		}
 
-		if (abs(nMotorEncoder[backLeftMotor]/2)*2 == (rotations * 360) || valMod >= 6) { //case: loop is done motor is at correct position or speed is too slow.
+		if (abs((float)nMotorEncoder[backLeftMotor]/2.0)(int)*2 == (abs(rotations) * 360) || valMod >= 6) { //case: loop is done motor is at correct position or speed is too slow.
 			exitLoop = true; //main loop exit.
 		}
 
