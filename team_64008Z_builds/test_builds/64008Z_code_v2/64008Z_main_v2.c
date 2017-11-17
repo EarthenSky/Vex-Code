@@ -138,34 +138,35 @@ float calcSpeed = 0;
 void moveRotations(float rotations, float speed=30) {
 	bool isForwards = true;
 
+	//init encoders
 	nMotorEncoder[backLeftMotor] = 0;
 	nMotorEncoder[backRightMotor] = 0;
 
 	while(exitLoop == false) {
+		//DEBUG: set encoder values
 		encLVal = nMotorEncoder[backLeftMotor];
 		encRVal = nMotorEncoder[backRightMotor];
 
 		error = nMotorEncoder[backLeftMotor] - nMotorEncoder[backRightMotor];  //set offset value, if 0 both are moveing at same speed.
 
-		rMod += error / kp; //create modifier.
+		//if both encoders share same value {abs(x/2)*2}, it is moving straight so don't change mod.
+		if (abs(nMotorEncoder[backLeftMotor]/2)*2 != abs(nMotorEncoder[backRightMotor]/2)*2) {
+			rMod += error / kp; //update modifier.
+		}
 
-		if (nMotorEncoder[backLeftMotor] >= (rotations * 360)) {  //back
+		if (nMotorEncoder[backLeftMotor] >= (rotations * 360)) {  //moving back
 			if(isForwards == false) { valMod += 1; } //each change in direction makes speed smaller
 			isForwards = true;
+
 			setLeftRightMoveSpeed(-speed / valMod, -(speed + rMod) / valMod);  //applies the modifier.
 		}
-		else if (nMotorEncoder[backLeftMotor] <= (rotations * 360)) {  //forwards
+		else if (nMotorEncoder[backLeftMotor] <= (rotations * 360)) {  //moving forwards
 			if(isForwards == true) { valMod += 1; } //each change in direction makes speed smaller
 			isForwards = false;
 
-			if (nMotorEncoder[backLeftMotor] == nMotorEncoder[backRightMotor]) {
-				setLeftRightMoveSpeed(speed / valMod, speed / valMod);  //no modifier
-			}
-			else {
-				setLeftRightMoveSpeed(speed / valMod, (speed + rMod) / valMod);  //applies the modifier.
-			}
+			setLeftRightMoveSpeed(speed / valMod, (speed + rMod) / valMod);  //applies the modifier.
 
-			calcSpeed++;  //find ticks
+			calcSpeed++;  //DEBUG: find ticks
 		}
 
 		if (abs(nMotorEncoder[backLeftMotor]/2)*2 == (rotations * 360) || valMod >= 6) { //case: loop is done motor is at correct position or speed is too slow.
@@ -216,7 +217,7 @@ void rotateUntilDegrees(float degrees, int speed, float mod=2) {
 // target (in degrees) is added/subtracted from current gyro reading to get a target gyro reading
 // run PD loop to turn to target
 // checks if target has been reached AND is at target for over 250ms before moving on
-void gyroTurn (int turnDirection, int targetDegrees, int maxPower=87, int minPower=22, int timeOut=3000) {
+void gyroTurn (bool isDirectValue, int turnDirection, int targetDegrees, int maxPower=87, int minPower=22, int timeOut=3000) {
 	// initialize PD loop variables
 	float kp = 0.33; // TO BE TUNED
 	int error = targetDegrees;
@@ -228,7 +229,7 @@ void gyroTurn (int turnDirection, int targetDegrees, int maxPower=87, int minPow
 	bool atTarget = false;
 
 	// initialize gyro data variables
-	int targetReading = SensorValue[gyro];
+	int targetReading = isDirectValue == false ? SensorValue[gyro] : 0;  //test.
 
 	// get gyroscope target reading
 	if (turnDirection >= 1)
@@ -295,7 +296,7 @@ float getRFDistance (int precision=5, int pollingTime=40) {
 	return sumDistances / precision;
 }
 
-void pullBack () {
+void pullBackDeprecated() {
   //small jolt
 	moveLeftRightFor(150, -127, -127);
 	wait1Msec(150);
@@ -344,7 +345,7 @@ void runAutoDeprecated() {
 	autoMoveGoalArms(-127);
 
 	/*Move Away From Goal.*/
-  pullBack();
+  pullBackDeprecated();
 }
 
 void runAuto() {
@@ -352,8 +353,9 @@ void runAuto() {
 	autoMoveGoalArms(-127);
 
 	/*Move Forwards One Rotation*/
+	moveRotations(false, 1, 100);
 
-	/*Rotate Towards */
+	/**/
 }
 
 void pre_auton() {
@@ -361,19 +363,46 @@ void pre_auton() {
 }
 
 task autonomous	{
+	//DEBUG: just test code now.
 	moveRotations(3);
 	moveRotations(-3);
+
+	wait1Msec(1000);
+
+	gyroTurn(false, 1, 180);  //turn 180 degrees.
+
+	wait1Msec(1000);
+
+	gyroTurn(false, 1, 90);  //turn 90 degrees.
+
+	wait1Msec(1000);
+
+	gyroTurn(false, 1, 90);  //turn 90 degrees.
+
+	wait1Msec(1000);
+
+	gyroTurn(false, -1, 90);  //turn -90 degrees.
+
+	wait1Msec(1000);
+
+	gyroTurn(true, 1, 270);  //turn to 270 degrees.
+
+	wait1Msec(1000);
+
+	gyroTurn(true, 1, 15);  //turn to 15 degrees.
+
+	wait1Msec(1000);
+
+	gyroTurn(true, -1, 270);  //turn to 270 degrees.
+
 	//runAuto();  //this calls the autonomous script.
 }
-
 
 bool tempLock = false;
 
 bool isHoldingClaw = false;
 bool isGoalArmMovingDown = false;
 task usercontrol {
-
-
 	while(true)
 	{
 		/*Goal Arm*/
@@ -424,17 +453,8 @@ task usercontrol {
 			}
 		}
 
-		if(vexRT[Btn7U] == 1)	{
-			if(tempLock = false) {
-				gyroTurn(1, 180);  //turn 180 degrees.
-			}
-			tempLock = true;
-		}
-		else {
-			tempLock = false;
-		}
 		if(vexRT[Btn7D] == 1)	{
-			moveRotations(10);  //move 10 rotations.
+			moveRotations(5);  //move 5 rotations fwd.
 		}
 
 		/*Tank Drive*/
