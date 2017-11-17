@@ -153,7 +153,7 @@ void moveRotations(float rotations, float speed=50) {
 		writeDebugStreamLine("The error of (L - R) is %d degrees -> at tick %d", error, currentTick);  //DEBUG: this
 
 		//if both encoders share same value (about) {abs(x/2)*2}, it is moving straight so don't change mod.  //TODO: remove?
-		if (abs((float)nMotorEncoder[backLeftMotor]/2.0)(int)*2 != abs((float)nMotorEncoder[backRightMotor]/2.0)(int)*2) {
+		if (abs(nMotorEncoder[backLeftMotor]/2)*2 != abs(nMotorEncoder[backRightMotor]/2)*2) {
 			rMod += error / kp; //update modifier.
 		}
 		writeDebugStreamLine("The motor modifier of (mod += error[%d] / kp[%d]) is +[%d / 127] motor speed -> at tick %d", error, kp, rMod, currentTick);  //DEBUG: this
@@ -173,7 +173,7 @@ void moveRotations(float rotations, float speed=50) {
 			currentTick++;  //DEBUG: find ticks
 		}
 
-		if (abs((float)nMotorEncoder[backLeftMotor]/2.0)(int)*2 == (abs(rotations) * 360) || valMod >= 6) { //case: loop is done motor is at correct position or speed is too slow.
+		if (abs(nMotorEncoder[backLeftMotor]/2)*2 == (abs(rotations) * 360) || valMod >= 6) { //case: loop is done motor is at correct position or speed is too slow.
 			exitLoop = true; //main loop exit.
 		}
 
@@ -357,7 +357,7 @@ void runAuto() {
 	autoMoveGoalArms(-127);
 
 	/*Move Forwards One Rotation*/
-	moveRotations(false, 1, 100);
+	moveRotations(1, 100);
 
 	/**/
 }
@@ -418,10 +418,10 @@ task usercontrol {
 		}
 
 		if(isGoalArmMovingDown == true && SensorValue[handsDown] == 0) {
-			//motor[handMotors] = -127;
+			motor[handMotors] = -127;
 		}
 		else if (isGoalArmMovingDown == false && SensorValue[handsUp] == 0){
-			//motor[handMotors] = 127;
+			motor[handMotors] = 127;
 		}
 		else {
 			motor[handMotors] = 0;
