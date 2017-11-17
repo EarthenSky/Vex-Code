@@ -11,9 +11,9 @@
 #pragma config(Motor,  port2,           handMotors,    tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port3,           clawMotor,     tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port4,           frontRightMotor, tmotorVex393_MC29, openLoop)
-#pragma config(Motor,  port5,           backRightMotor, tmotorVex393HighSpeed_MC29, openLoop, encoderPort, I2C_2)
+#pragma config(Motor,  port5,           backRightMotor, tmotorVex393HighSpeed_MC29, openLoop, encoderPort, I2C_1)
 #pragma config(Motor,  port6,           frontLeftMotor, tmotorVex393_MC29, openLoop, reversed)
-#pragma config(Motor,  port7,           backLeftMotor, tmotorVex393HighSpeed_MC29, openLoop, reversed, encoderPort, I2C_1)
+#pragma config(Motor,  port7,           backLeftMotor, tmotorVex393HighSpeed_MC29, openLoop, reversed, encoderPort, I2C_2)
 #pragma config(Motor,  port8,           coneArmsRight, tmotorVex393_MC29, openLoop, reversed)
 #pragma config(Motor,  port9,           coneArmsLeft,  tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port10,          coneArmsLeft2, tmotorVex393_HBridge, openLoop)
@@ -122,7 +122,7 @@ void moveLeftRightFor(int time, int leftSpeed, int rightSpeed) {
 	motor[backRightMotor] = 0;
 }
 
-int kp = 50; /*TODO: tune this */
+float kp = 6; /*TODO: tune this */
 float error = 0;
 float rMod = 0;
 
@@ -132,10 +132,10 @@ float encRVal;
 int valMod = 0;
 bool exitLoop = false;
 
-int calcSpeed = 0;
+float calcSpeed = 0;
 
 //moves straight
-void moveRotations(float rotations, float speed=100) {
+void moveRotations(float rotations, float speed=30) {
 	bool isForwards = true;
 
 	nMotorEncoder[backLeftMotor] = 0;
@@ -149,28 +149,33 @@ void moveRotations(float rotations, float speed=100) {
 
 		rMod += error / kp; //create modifier.
 
-		if (-nMotorEncoder[backLeftMotor] >= (rotations * 360)) {  //back
+		if (nMotorEncoder[backLeftMotor] >= (rotations * 360)) {  //back
 			if(isForwards == false) { valMod += 1; } //each change in direction makes speed smaller
 			isForwards = true;
 			setLeftRightMoveSpeed(-speed / valMod, -(speed + rMod) / valMod);  //applies the modifier.
 		}
-		else if (-nMotorEncoder[backLeftMotor] <= (rotations * 360)) {  //forwards
+		else if (nMotorEncoder[backLeftMotor] <= (rotations * 360)) {  //forwards
 			if(isForwards == true) { valMod += 1; } //each change in direction makes speed smaller
 			isForwards = false;
-			setLeftRightMoveSpeed(speed / valMod, (speed + rMod) / valMod);  //applies the modifier.
+
+			if (nMotorEncoder[backLeftMotor] == nMotorEncoder[backRightMotor]) {
+				setLeftRightMoveSpeed(speed / valMod, speed / valMod);  //no modifier
+			}
+			else {
+				setLeftRightMoveSpeed(speed / valMod, (speed + rMod) / valMod);  //applies the modifier.
+			}
 
 			calcSpeed++;  //find ticks
 		}
 
-		if (-nMotorEncoder[backLeftMotor] == (rotations * 360) || valMod >= 4) { //case: loop is done motor is at correct position or speed is too slow.
+		if (abs(nMotorEncoder[backLeftMotor]/2)*2 == (rotations * 360) || valMod >= 6) { //case: loop is done motor is at correct position or speed is too slow.
 			exitLoop = true; //main loop exit.
-
-			calcSpeed = (nMotorEncoder[backLeftMotor] / degreesPerTick) * 10;  //find avg per second  (*10 is converting ticks to seconds)
 		}
 
 		wait1Msec(100);  //100ms polling time.  No float math if too fast.
 	}
 
+	//calcSpeed = (nMotorEncoder[backLeftMotor] / calcSpeed) * 10;  //find avg per second  (*10 is converting ticks to seconds)
 	setLeftRightMoveSpeed(); //turn off motors.
 }
 
@@ -238,7 +243,7 @@ void gyroTurn (int turnDirection, int targetDegrees, int maxPower=87, int minPow
 	while (!atTarget && (time1[T2] < timeOut))
 	{
 		error = targetReading - SensorValue[gyro]; 	// calculate error
-		drivePower = error * kp;	// calculate PD loop output
+		drivePower = error * kp;	// calculate PD loop output  //speed
 
 		//keep speed between min and max power.
 		if(drivePower < minPower && drivePower > 0)  {
@@ -278,7 +283,7 @@ void gyroTurn (int turnDirection, int targetDegrees, int maxPower=87, int minPow
 
 //value is in inches.
 //precision is for how accurate the value is going to be.  More accurate -> longer time to get value.
-float getRFDistance (int precision=5, int pollingTime=20) {
+float getRFDistance (int precision=5, int pollingTime=40) {
 	float sumDistances = 0;  //holds all of the distances from the rangefinder.
 
 	for (int i = 0; i < precision; i++) {
@@ -356,7 +361,9 @@ void pre_auton() {
 }
 
 task autonomous	{
-	runAuto();  //this calls the autonomous script.
+	moveRotations(3);
+	moveRotations(-3);
+	//runAuto();  //this calls the autonomous script.
 }
 
 
@@ -365,7 +372,7 @@ bool tempLock = false;
 bool isHoldingClaw = false;
 bool isGoalArmMovingDown = false;
 task usercontrol {
-	moveRotations(2);
+
 
 	while(true)
 	{
@@ -389,10 +396,10 @@ task usercontrol {
 
 		/*Cone Arm*/
 		if(vexRT[Btn5U] == 1)	{
-			setConePickUpSpeed(127);
+			setConePickUpSpeed(87);
 		}
 		else if (vexRT[Btn6U] == 1) {
-			setConePickUpSpeed(-127);
+			setConePickUpSpeed(-87);
 		}
 		else {
 			setConePickUpSpeed();
