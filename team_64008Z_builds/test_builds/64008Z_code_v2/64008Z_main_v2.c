@@ -129,14 +129,16 @@ float rMod = 0;
 float encLVal;
 float encRVal;
 
-int valMod = 0;
+float valMod = 0;
 bool exitLoop = false;
 
-float calcSpeed = 0;
+float currentTick = 0;
 
 //moves straight
-void moveRotations(float rotations, float speed=30) {
+void moveRotations(float rotations, float speed=50) {
 	bool isForwards = true;
+
+	currentTick = 0;
 
 	//init encoders
 	nMotorEncoder[backLeftMotor] = 0;
@@ -148,25 +150,27 @@ void moveRotations(float rotations, float speed=30) {
 		encRVal = nMotorEncoder[backRightMotor];
 
 		error = nMotorEncoder[backLeftMotor] - nMotorEncoder[backRightMotor];  //set offset value, if 0 both are moveing at same speed.
+		writeDebugStreamLine("The error of (L - R) is %d degrees -> at tick %d", error, currentTick);  //DEBUG: this
 
-		//if both encoders share same value {abs(x/2)*2}, it is moving straight so don't change mod.
+		//if both encoders share same value (about) {abs(x/2)*2}, it is moving straight so don't change mod.  //TODO: remove?
 		if (abs(nMotorEncoder[backLeftMotor]/2)*2 != abs(nMotorEncoder[backRightMotor]/2)*2) {
 			rMod += error / kp; //update modifier.
 		}
+		writeDebugStreamLine("The motor modifier of (mod += error[%d] / kp[%d]) is [%d / 127] motor speed -> at tick %d", error, kp, rMod, currentTick);  //DEBUG: this
 
 		if (nMotorEncoder[backLeftMotor] >= (rotations * 360)) {  //moving back
-			if(isForwards == false) { valMod += 1; } //each change in direction makes speed smaller
+			if(isForwards == false) { valMod += 1.5; } //each change in direction makes speed smaller
 			isForwards = true;
 
 			setLeftRightMoveSpeed(-speed / valMod, -(speed + rMod) / valMod);  //applies the modifier.
 		}
 		else if (nMotorEncoder[backLeftMotor] <= (rotations * 360)) {  //moving forwards
-			if(isForwards == true) { valMod += 1; } //each change in direction makes speed smaller
+			if(isForwards == true) { valMod += 1.5; } //each change in direction makes speed smaller
 			isForwards = false;
 
 			setLeftRightMoveSpeed(speed / valMod, (speed + rMod) / valMod);  //applies the modifier.
 
-			calcSpeed++;  //DEBUG: find ticks
+			currentTick++;  //DEBUG: find ticks
 		}
 
 		if (abs(nMotorEncoder[backLeftMotor]/2)*2 == (rotations * 360) || valMod >= 6) { //case: loop is done motor is at correct position or speed is too slow.
