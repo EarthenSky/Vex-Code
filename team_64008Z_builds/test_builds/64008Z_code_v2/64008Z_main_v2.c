@@ -122,7 +122,7 @@ void moveLeftRightFor(int time, int leftSpeed, int rightSpeed) {
 	motor[backRightMotor] = 0;
 }
 
-float kp = 6; /*TODO: tune this */
+float kp = 3; /*TODO: tune this */
 float error = 0;
 float rMod = 0;
 
@@ -156,19 +156,19 @@ void moveRotations(float rotations, float speed=50) {
 		if (abs((float)nMotorEncoder[backLeftMotor]/2.0)(int)*2 != abs((float)nMotorEncoder[backRightMotor]/2.0)(int)*2) {
 			rMod += error / kp; //update modifier.
 		}
-		writeDebugStreamLine("The motor modifier of (mod += error[%d] / kp[%d]) is [%d / 127] motor speed -> at tick %d", error, kp, rMod, currentTick);  //DEBUG: this
+		writeDebugStreamLine("The motor modifier of (mod += error[%d] / kp[%d]) is +[%d / 127] motor speed -> at tick %d", error, kp, rMod, currentTick);  //DEBUG: this
 
-		if (abs(nMotorEncoder[backLeftMotor]) >= abs(rotations * 360)) {  //moving back
+		if (abs(nMotorEncoder[backLeftMotor]) > abs(rotations * 360)) {  //moving back
 			if(isForwards == false) { valMod += 1.5; } //each change in direction makes speed smaller
 			isForwards = true;
 
-			setLeftRightMoveSpeed(-speed / valMod, -(speed + rMod) / valMod);  //applies the modifier.
+			setLeftRightMoveSpeed(-speed / valMod, -(speed * rMod) / valMod);  //applies the modifier.
 		}
-		else if (abs(nMotorEncoder[backLeftMotor]) <= abs(rotations * 360)) {  //moving forwards
+		else if (abs(nMotorEncoder[backLeftMotor]) < abs(rotations * 360)) {  //moving forwards
 			if(isForwards == true) { valMod += 1.5; } //each change in direction makes speed smaller
 			isForwards = false;
 
-			setLeftRightMoveSpeed(speed / valMod, (speed + rMod) / valMod);  //applies the modifier.
+			setLeftRightMoveSpeed(speed / valMod, (speed * rMod) / valMod);  //applies the modifier.
 
 			currentTick++;  //DEBUG: find ticks
 		}
@@ -273,10 +273,10 @@ void gyroTurn (bool isDirectValue, int turnDirection, int targetDegrees, int max
 		setLeftRightMoveSpeed(drivePower, -drivePower);
 
 		// check for finish
-		if (abs(error) > 10) 	// if robot is within 1 degree of target and timer flag is off
+		if (abs(error) > 10) 	// if robot is within 1 degree off target and timer flag is off
 			clearTimer(T1);			// start a timer
 
-		if (time1(T1) > 200)	// if the timer is over 250ms and timer flag is true
+		if (time1(T1) > 200)	// if the timer is over 200ms and timer flag is true
 			atTarget = true;	// set boolean to complete while loop
 	}
 
