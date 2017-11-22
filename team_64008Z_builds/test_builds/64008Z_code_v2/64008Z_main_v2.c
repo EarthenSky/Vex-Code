@@ -122,7 +122,6 @@ void moveLeftRightFor(int time, int leftSpeed, int rightSpeed) {
 const int end_Degree_Mod = 180;
 
 float rMod = 0;
-
 //moves straight
 void moveRotations(float rotations, int negitaveMod=1, float speed=90) {
 	//bool isForwards = false;
@@ -153,7 +152,7 @@ void moveRotations(float rotations, int negitaveMod=1, float speed=90) {
 
 		writeDebugStreamLine("The error of (L - R) is %d degrees -> at tick %d", error, currentTick);  //DEBUG: this
 
-		if (abs(encLVal) < abs(rotations * 360 - end_Degree_Mod)) {  //moving back
+		if (abs(encLVal) < abs(rotations * 360 - end_Degree_Mod)) {  //moving forwards
 			setLeftRightMoveSpeed((speed - rMod) * negitaveMod, speed * negitaveMod);  //applies the modifier.
 		}
 		else if (abs(encLVal) < abs(rotations * 360)) {  //moving forwards slowly
@@ -162,19 +161,19 @@ void moveRotations(float rotations, int negitaveMod=1, float speed=90) {
 
 		currentTick++;  //DEBUG: find ticks
 
-
-
-		if (abs(encLVal) >= (abs(rotations) * 360)) { //case: loop is done motor is at correct position or speed is too slow.
+		if (abs(encLVal) >= (abs(rotations) * 360)) { //case: loop is done motor is at (or past) correct position.
 			exitLoop = true; //main loop exit.
+      setLeftRightMoveSpeed(-(speed - rMod) / 3 * negitaveMod, -speed / 3 * negitaveMod);  //VERY small push backwards.
 		}
 
 		nMotorEncoder[backLeftDrive] = 0;
 		nMotorEncoder[backRightDrive] = 0;
-		wait1Msec(80);  //100ms polling time.  No float math if too fast.
+		wait1Msec(80);  //80ms polling time.  No float math if too fast.
 	}
 
 	//calcSpeed = (nMotorEncoder[backLeftMotor] / calcSpeed) * 10;  //find avg per second  (*10 is converting ticks to seconds)
 	setLeftRightMoveSpeed(); //turn off motors.
+
 	return;
 }
 
@@ -278,6 +277,8 @@ void gyroTurn (bool isDirectValue, int turnDirection, int targetDegrees, int max
 
 	// reset kp
 	kp = 0.33;
+
+  return; //?
 }
 
 //value is in inches.
@@ -378,7 +379,6 @@ task autonomous	{
 }
 
 bool tempLock = false;
-
 bool isHoldingClaw = false;
 bool isGoalArmMovingDown = false;
 task usercontrol {
