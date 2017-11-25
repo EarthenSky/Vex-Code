@@ -60,6 +60,8 @@ void setLeftRightMoveSpeed(int leftSpeed=0, int rightSpeed=0) {
 	//right side
 	motor[frontRightDrive] = rightSpeed;
 	motor[backRightDrive] = rightSpeed;
+
+	writeDebugStreamLine("L - R is %d - %d", leftSpeed, rightSpeed);
 }
 
 ///sets cone pickup speed.  Empty is not moving.
@@ -122,17 +124,26 @@ void moveLeftRightFor(int time, int leftSpeed, int rightSpeed) {
 const int end_Degree_Mod = 180;
 
 float rMod = 0;
+float rModInit = -2;
+
+float encLVal = 0;
+float encRVal = 0;
+
+float error = 0;
 //moves straight
-void moveRotations(float rotations, int negitaveMod=1, float speed=90) {
+void moveRotations(float rotations, int negitaveMod=1, float speed=80) {
 	//bool isForwards = false;
-	float kp = 14; /*TODO: tune this */
+	float kp = 1; /*TODO: tune this */
 	bool exitLoop = false;
-	float error = 0;
+
+	encLVal = 0;
+	encRVal = 0;
+
+	error = 0;
 
 	float currentTick = 0;
 
-	float encLVal = 0;
-	float encRVal = 0;
+	int pollMod = 1;
 
 	currentTick = 0;
 
@@ -141,38 +152,39 @@ void moveRotations(float rotations, int negitaveMod=1, float speed=90) {
 	nMotorEncoder[backRightDrive] = 0;
 
 	while(exitLoop == false) {
-		//DEBUG: set encoder values
-		encLVal += nMotorEncoder[backLeftDrive];
-		encRVal += nMotorEncoder[backRightDrive];
+		encLVal = nMotorEncoder[backLeftDrive];
+		encRVal = nMotorEncoder[backRightDrive];
 
-		error = nMotorEncoder[backLeftDrive] - nMotorEncoder[backRightDrive];  //set offset value, if 0 both are moveing at same speed.
+		error = (nMotorEncoder[backLeftDrive] - nMotorEncoder[backRightDrive]) * negitaveMod;  //set offset value, if 0 both are moveing at same speed.
 
-		rMod += error / kp; //update modifier.
+		rMod = (error * kp) - (rModInit); //update modifier.
 		//writeDebugStreamLine("The motor modifier of (mod += error[%d] / kp[%d]) is +[%d / 127] motor speed -> at tick %d", error, kp, rMod, currentTick);  //DEBUG: this
 
 		writeDebugStreamLine("The error of (L - R) is %d degrees -> at tick %d", error, currentTick);  //DEBUG: this
 
-		if (abs(encLVal) < abs(rotations * 360 - end_Degree_Mod)) {  //moving forwards
-			setLeftRightMoveSpeed((speed - rMod) * negitaveMod, speed * negitaveMod);  //applies the modifier.
+		if (abs(nMotorEncoder[backLeftDrive]) < abs(rotations * 360) - end_Degree_Mod) {  //moving forwards
+			setLeftRightMoveSpeed((speed - rMod) * negitaveMod, (speed + rMod) * negitaveMod);  //applies the modifier.
 		}
-		else if (abs(encLVal) < abs(rotations * 360)) {  //moving forwards slowly
-			setLeftRightMoveSpeed((speed - rMod) / 3 * negitaveMod, speed / 3 * negitaveMod);  //applies the modifier.
+		else if (abs(nMotorEncoder[backLeftDrive]) < abs(rotations * 360)) {  //moving forwards slowly
+			pollMod = 4;
+			setLeftRightMoveSpeed((speed - rMod) / 2 * negitaveMod, (speed + rMod) / 2 * negitaveMod);  //applies the modifier.
 		}
 
 		currentTick++;  //DEBUG: find ticks
 
-		if (abs(encLVal) >= (abs(rotations) * 360)) { //case: loop is done motor is at (or past) correct position.
+		if (abs(nMotorEncoder[backLeftDrive]) >= (abs(rotations) * 360)) { //case: loop is done motor is at (or past) correct position.
 			exitLoop = true; //main loop exit.
-      setLeftRightMoveSpeed(-(speed - rMod) / 3 * negitaveMod, -speed / 3 * negitaveMod);  //VERY small push backwards.
+      setLeftRightMoveSpeed(-(speed - rMod) * negitaveMod, -(speed + rMod) * negitaveMod);  //VERY small push backwards.
 		}
 
-		nMotorEncoder[backLeftDrive] = 0;
-		nMotorEncoder[backRightDrive] = 0;
-		wait1Msec(80);  //80ms polling time.  No float math if too fast.
+		wait1Msec(80 / pollMod);
 	}
 
 	//calcSpeed = (nMotorEncoder[backLeftMotor] / calcSpeed) * 10;  //find avg per second  (*10 is converting ticks to seconds)
 	setLeftRightMoveSpeed(); //turn off motors.
+
+	nMotorEncoder[backLeftDrive] = 0;
+	nMotorEncoder[backRightDrive] = 0;
 
 	return;
 }
@@ -214,7 +226,7 @@ void rotateUntilDegrees(float degrees, int speed, float mod=2) {
 // target (in degrees) is added/subtracted from current gyro reading to get a target gyro reading
 // run PD loop to turn to target
 // checks if target has been reached AND is at target for over 250ms before moving on
-void gyroTurn (bool isDirectValue, int turnDirection, int targetDegrees, int maxPower=87, int minPower=22, int timeOut=3000) {
+void gyroTurn (int turnDirection, int targetDegrees, bool isDirectValue=false, int maxPower=87, int minPower=22, int timeOut=3000) {
 	// initialize PD loop variables
 	float kp = 0.33; // TO BE TUNED
 	int error = targetDegrees;
@@ -226,7 +238,8 @@ void gyroTurn (bool isDirectValue, int turnDirection, int targetDegrees, int max
 	bool atTarget = false;
 
 	// initialize gyro data variables
-	int targetReading = isDirectValue == false ? SensorValue[gyro] : 0;  //test.
+	//int targetReading = isDirectValue == false ? SensorValue[gyro] : 0;  //test.
+	int targetReading = SensorValue[gyro];
 
 	// get gyroscope target reading
 	if (turnDirection >= 1)
@@ -363,7 +376,7 @@ void pre_auton() {
 
 task autonomous	{
 	//DEBUG: just test code now.
-	moveRotations(6);
+	/*moveRotations(6);
 	wait1Msec(2000);
 
 	moveRotations(6, -1);
@@ -373,7 +386,7 @@ task autonomous	{
 	wait1Msec(2000);
 
 	moveRotations(6, -1);
-	wait1Msec(2000);
+	wait1Msec(2000);*/
 
 	//runAuto();  //this calls the autonomous script.
 }
@@ -382,9 +395,21 @@ bool tempLock = false;
 bool isHoldingClaw = false;
 bool isGoalArmMovingDown = false;
 task usercontrol {
-	//moveRotations(1);
-	//moveRotations(-1);
-	while(true)
+	/*moveRotations(6);
+	wait1Msec(1000);
+
+	moveRotations(6, -1);
+	wait1Msec(1000);
+
+	moveRotations(6);
+	wait1Msec(1000);
+
+	moveRotations(6, -1);
+	wait1Msec(1000);*/
+
+	gyroTurn(1, 90);
+
+	while(false) //TODO: set to true so loop goes.
 	{
 		/*Goal Arm*/
 		if(vexRT[Btn8R] == 1)	{
@@ -437,12 +462,18 @@ task usercontrol {
 			}
 		}
 
-		if(vexRT[Btn7D] == 1)	{
-			moveRotations(10, 1);  //move 10 rotations forwards.
+		if(vexRT[Btn7U] == 1)	{
+			setLeftRightMoveSpeed(127, 127);
 		}
 
-		if(vexRT[Btn7U] == -1)	{
-			moveRotations(10, -1);  //move 10 rotations back.
+		if(vexRT[Btn7L] == 1)	{
+			motor[pushGoalHand] = 127;
+		}
+		else if(vexRT[Btn7D] == 1) {
+			motor[pushGoalHand] = -127;
+		}
+		else {
+			motor[pushGoalHand] = 0;
 		}
 
 		/*Tank Drive*/
