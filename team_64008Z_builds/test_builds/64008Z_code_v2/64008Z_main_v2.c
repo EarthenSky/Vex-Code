@@ -43,10 +43,15 @@ int roundToInt(float f) {  //rounds value to int.
 
 ///initialize the gyroscope
 void gyroInit() {
+	writeDebugStreamLine("Gyro Reset.");
 	SensorType[gyro] = sensorNone;
 	wait1Msec(1000);
+
+	writeDebugStreamLine("Gyro Assign..");
 	SensorType[gyro] = sensorGyro;
 	wait1Msec(2000);
+
+	writeDebugStreamLine("Gyro Setup...");
 	//SensorScale[Gyro] = 260;
 	SensorValue[gyro] = 0;
 	SensorFullCount[gyro] = 36000;
@@ -61,7 +66,7 @@ void setLeftRightMoveSpeed(int leftSpeed=0, int rightSpeed=0) {
 	motor[frontRightDrive] = rightSpeed;
 	motor[backRightDrive] = rightSpeed;
 
-	writeDebugStreamLine("L - R is %d - %d", leftSpeed, rightSpeed);
+	//writeDebugStreamLine("L - R is %d - %d", leftSpeed, rightSpeed);
 }
 
 ///sets cone pickup speed.  Empty is not moving.
@@ -160,7 +165,7 @@ void moveRotations(float rotations, int negitaveMod=1, float speed=80) {
 		rMod = (error * kp) - (rModInit); //update modifier.
 		//writeDebugStreamLine("The motor modifier of (mod += error[%d] / kp[%d]) is +[%d / 127] motor speed -> at tick %d", error, kp, rMod, currentTick);  //DEBUG: this
 
-		writeDebugStreamLine("The error of (L - R) is %d degrees -> at tick %d", error, currentTick);  //DEBUG: this
+		//writeDebugStreamLine("The error of (L - R) is %d degrees -> at tick %d", error, currentTick);  //DEBUG: this
 
 		if (abs(nMotorEncoder[backLeftDrive]) < abs(rotations * 360) - end_Degree_Mod) {  //moving forwards
 			setLeftRightMoveSpeed((speed - rMod) * negitaveMod, (speed + rMod) * negitaveMod);  //applies the modifier.
@@ -226,9 +231,9 @@ void rotateUntilDegrees(float degrees, int speed, float mod=2) {
 // target (in degrees) is added/subtracted from current gyro reading to get a target gyro reading
 // run PD loop to turn to target
 // checks if target has been reached AND is at target for over 250ms before moving on
-void gyroTurn (int turnDirection, int targetDegrees, bool isDirectValue=false, int maxPower=87, int minPower=22, int timeOut=3000) {
+void gyroTurn (int turnDirection, int targetDegrees, bool isDirectValue=false, int maxPower=92, int minPower=27, int timeOut=3000) {
 	// initialize PD loop variables
-	float kp = 0.33; // TO BE TUNED
+	float kp = 0.28; // TO BE TUNED
 	int error = targetDegrees;
 	int drivePower = 0;
 
@@ -248,13 +253,15 @@ void gyroTurn (int turnDirection, int targetDegrees, bool isDirectValue=false, i
 		targetReading -= targetDegrees;
 
 	// change kp if target is under 20 degree threshold
-	if (targetDegrees < 200) { kp = 0.4; }  //ok?
+	if (targetDegrees < 200) { kp = 0.2; }  //ok?
 
-	// run motors until target is within 1/10 degree certainty
+	// run motors until target is within 1 degree certainty
 	while (!atTarget && (time1[T2] < timeOut))
 	{
 		error = targetReading - SensorValue[gyro]; 	// calculate error
 		drivePower = error * kp;	// calculate PD loop output  //speed
+
+		writeDebugStreamLine("error -> %d, gyro -> %d", error, SensorValue[gyro]);  //DEBUG: this
 
 		//keep speed between min and max power.
 		if(drivePower < minPower && drivePower > 0)  {
@@ -276,7 +283,7 @@ void gyroTurn (int turnDirection, int targetDegrees, bool isDirectValue=false, i
 		}
 
 		//send power to motors.
-		setLeftRightMoveSpeed(drivePower, -drivePower);
+		setLeftRightMoveSpeed(-drivePower, drivePower);
 
 		// check for finish
 		if (abs(error) > 10) 	// if robot is within 1 degree off target and timer flag is off
@@ -376,6 +383,10 @@ void pre_auton() {
 
 task autonomous	{
 	//DEBUG: just test code now.
+
+	gyroTurn(-1, 9000);
+
+
 	/*moveRotations(6);
 	wait1Msec(2000);
 
@@ -395,6 +406,11 @@ bool tempLock = false;
 bool isHoldingClaw = false;
 bool isGoalArmMovingDown = false;
 task usercontrol {
+	writeDebugStreamLine("***************Start************");
+	writeDebugStreamLine("***************Start************");
+	writeDebugStreamLine("***************Start************");
+	writeDebugStreamLine("***************Start************");
+	gyroInit();
 	/*moveRotations(6);
 	wait1Msec(1000);
 
@@ -407,9 +423,17 @@ task usercontrol {
 	moveRotations(6, -1);
 	wait1Msec(1000);*/
 
-	gyroTurn(1, 90);
+	//gyroTurn(1, 90);
 
-	while(false) //TODO: set to true so loop goes.
+	gyroTurn(-1, 2780);
+	wait1Msec(1000);
+
+	gyroTurn(1, 2780);
+	wait1Msec(1000);
+
+	writeDebugStreamLine("Done");
+
+	while(true) //TODO: set to true so loop goes.
 	{
 		/*Goal Arm*/
 		if(vexRT[Btn8R] == 1)	{
