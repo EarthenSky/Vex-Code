@@ -34,6 +34,16 @@
 /*Other Scripts*/
 //#include "64008Z_auto_v2.c" //autonomous code.
 
+bool inTeleop = false;
+
+float currentTick = 0;
+
+//are there enums?  //TODO: prob not D:
+typedef enum {
+  up = 0,
+  down = 1,
+};
+
 int roundToInt(float f) {  //rounds value to int.
   if(f>0)
   	return (int)(f + 0.5);
@@ -57,16 +67,22 @@ void gyroInit() {
 	SensorFullCount[gyro] = 36000;
 }
 
-///sets the speed of the left and right sides of the drive.  Empty is not moving.
-void setLeftRightMoveSpeed(int leftSpeed=0, int rightSpeed=0) {
-	//left side
-	motor[frontLeftDrive] = leftSpeed;
-	motor[backLeftDrive] = leftSpeed;
-	//right side
-	motor[frontRightDrive] = rightSpeed;
-	motor[backRightDrive] = rightSpeed;
+//TODO: TEST THIS.
+///direction = "up" for up and "down" (or litterally anything else) all lowercase.
+void autoMoveGoalArms(string direction) {
+	if(string == "up") {
+		motor[goalHandLeft] = 127;
+		motor[goalHandRight] = 127;
+    waitUntil(SensorValue[handsUp] == 1);
+	}
+	else {
+		motor[goalHandLeft] = -127;
+		motor[goalHandRight] = -127;
+    waitUntil(SensorValue[handsDown] == 1);
+	}
 
-	//writeDebugStreamLine("L - R is %d - %d", leftSpeed, rightSpeed);
+	motor[goalHandLeft] = 0;
+	motor[goalHandRight] = 0;
 }
 
 ///sets cone pickup speed.  Empty is not moving.
@@ -75,70 +91,61 @@ void setConePickUpSpeed (int val=0) {
 	motor[coneArmsInner] = val;
 }
 
-/*
-///sets cone pickup speed.  Empty is not moving.
-void setConePickUpSpeed (int val=0) {
+///*VERY IMPORTANT*: THIS MUST BE CALLED FOR STRAIGHTENING TO OCCUR.
+///sets the speed of the left and right sides of the drive.  Empty is not moving.
+int leftMod = 0;
+int rightMod = 0;
+void setLeftRightMoveSpeed(int leftSpeed=0, int rightSpeed=0) {
+  if (inTeleop == false) {
+    straightenMotors();
+  }  //make sure not to straighten motors while in teleop.  Don't fuck with Victor.
+
 	//left side
-	motor[coneArmTopL] = val;
-	motor[coneArmBottomL] = val;
+	motor[frontLeftDrive] = abs(leftSpeed) + leftMod;
+  motor[backLeftDrive] = abs(leftSpeed) + leftMod;
+  //if negitave, make negitave.
+  if(leftSpeed < 0) {
+    motor[frontLeftDrive] *= -1;
+    motor[backLeftDrive] *= -1;
+  }
+
 	//right side
-	motor[coneArmTopR] = val;
-	motor[coneArmBottomR] = val;
-}*/
+	motor[frontRightDrive] = abs(rightSpeed) + rightMod;
+	motor[backRightDrive] = abs(rightSpeed) + rightMod;
+  //if negitave, make negitave.
+  if(rightSpeed < 0) {
+    motor[frontRightDrive] *= -1;
+    motor[backRightDrive] *= -1;
+  }
 
-///holds autonomous commands and main function.
-///
-
-///is a task
-///moves goal arms up or down based on value of direction. (positive or negitave) //make task
-void autoMoveGoalArms(int direction) {
-	if(direction > 0) {
-		motor[goalHandLeft] = 127;
-		motor[goalHandRight] = 127;
-	}
-	else {
-		motor[goalHandLeft] = -127;
-		motor[goalHandRight] = -127;
-	}
-
-	wait1Msec(1250);
-
-	motor[goalHandLeft] = 0;
-	motor[goalHandRight] = 0;
+	//writeDebugStreamLine("L - R is %d - %d", leftSpeed + leftMod, rightSpeed + rightMod); //DEBUG: this
 }
 
-///time is in ms, speeds fromn -127 to 127.
-void moveLeftRightFor(int time, int leftSpeed, int rightSpeed) {
-	//left side
-	motor[frontLeftDrive] = leftSpeed;
-	motor[backLeftDrive] = leftSpeed;
-	//right side
-	motor[frontRightDrive] = rightSpeed;
-	motor[backRightDrive] = rightSpeed;
+float kp = 0.9;
 
-  wait1Msec(time);
+float errorVal = 0;
+void straightenMotors() {
+  //set offset value, if 0 both sides are moving at same speed.  use abs value for both motors, pretending both sides going forwards.
+  error = (abs(nMotorEncoder[backLeftDrive]) - abs(nMotorEncoder[backRightDrive]));
 
-  //left side
-	motor[frontLeftDrive] = 0;
-	motor[backLeftDrive] = 0;
-	//right side
-	motor[frontRightDrive] = 0;
-	motor[backRightDrive] = 0;
+  //update both modifiers.
+  rightMod = (errorVal * kp);
+  leftMod = -rightMod;
+
+  //writeDebugStreamLine("The motor modifier of (mod = error[%d] * kp[%d]) is +[%d / 127] motor speed -> at tick %d", errorVal, kp, leftMod, currentTick);  //DEBUG: this
+  //writeDebugStreamLine("The error of (L - R) is %d degrees -> at tick %d", errorVal, currentTick);  //DEBUG: this
 }
 
-const int end_Degree_Mod = 180;
-
-float rMod = 0;
-float rModInit = -2;
+void resetMoveMod () { leftMod = 0; rightMod = 0; }  //small func.
 
 float encLVal = 0;
 float encRVal = 0;
 
 float error = 0;
 //moves straight
-void moveRotations(float rotations, int negitaveMod=1, float speed=80) {
+void moveRotations(float rotations, int negitaveMod=1, int maxPower=92, int minPower=27) {
 	//bool isForwards = false;
-	float kp = 1; /*TODO: tune this */
+	float kp = 0.3;  //new kp
 	bool exitLoop = false;
 
 	encLVal = 0;
@@ -146,52 +153,54 @@ void moveRotations(float rotations, int negitaveMod=1, float speed=80) {
 
 	error = 0;
 
-	float currentTick = 0;
-
-	int pollMod = 1;
-
-	currentTick = 0;
+  float speed = 80;
 
 	//init encoders
 	nMotorEncoder[backLeftDrive] = 0;
 	nMotorEncoder[backRightDrive] = 0;
 
 	while(exitLoop == false) {
-		encLVal = nMotorEncoder[backLeftDrive];
-		encRVal = nMotorEncoder[backRightDrive];
+    encLVal = nMotorEncoder[backLeftDrive];
+    encRVal = nMotorEncoder[backRightDrive];
 
-		error = (nMotorEncoder[backLeftDrive] - nMotorEncoder[backRightDrive]) * negitaveMod;  //set offset value, if 0 both are moveing at same speed.
+		error = (abs(rotations) * 360) - encLVal;
+    speed = error * kp;
 
-		rMod = (error * kp) - (rModInit); //update modifier.
-		//writeDebugStreamLine("The motor modifier of (mod += error[%d] / kp[%d]) is +[%d / 127] motor speed -> at tick %d", error, kp, rMod, currentTick);  //DEBUG: this
+    //keep speed between min and max power.
+    if(speed < minPower && speed > 0) {
+  		speed = minPower;
+  	} else if(speed > -minPower && speed < 0) {
+      speed = -minPower;
+    }
 
-		//writeDebugStreamLine("The error of (L - R) is %d degrees -> at tick %d", error, currentTick);  //DEBUG: this
+  	if(speed > maxPower) {
+  		speed = maxPower;
+  	} else if(speed < -maxPower) {
+      speed = -maxPower;
+    }
 
-		if (abs(nMotorEncoder[backLeftDrive]) < abs(rotations * 360) - end_Degree_Mod) {  //moving forwards
-			setLeftRightMoveSpeed((speed - rMod) * negitaveMod, (speed + rMod) * negitaveMod);  //applies the modifier.
-		}
-		else if (abs(nMotorEncoder[backLeftDrive]) < abs(rotations * 360)) {  //moving forwards slowly
-			pollMod = 4;
-			setLeftRightMoveSpeed((speed - rMod) / 2 * negitaveMod, (speed + rMod) / 2 * negitaveMod);  //applies the modifier.
-		}
+		setLeftRightMoveSpeed(speed * negitaveMod, speed * negitaveMod);  //move forwards (also does straightening)
 
-		currentTick++;  //DEBUG: find ticks
-
-		if (abs(nMotorEncoder[backLeftDrive]) >= (abs(rotations) * 360)) { //case: loop is done motor is at (or past) correct position.
+		if (abs(encLVal) >= abs(rotations) * 360) { //case: loop is done motor is at (or past) correct position.
 			exitLoop = true; //main loop exit.
-      setLeftRightMoveSpeed(-(speed - rMod) * negitaveMod, -(speed + rMod) * negitaveMod);  //VERY small push backwards.
 		}
 
-		wait1Msec(80 / pollMod);
+    currentTick++;  //DEBUG: to find ticks
+		wait1Msec(40);
 	}
 
-	//calcSpeed = (nMotorEncoder[backLeftMotor] / calcSpeed) * 10;  //find avg per second  (*10 is converting ticks to seconds)
 	setLeftRightMoveSpeed(); //turn off motors.
 
+  //reset encoders, just incase.
 	nMotorEncoder[backLeftDrive] = 0;
 	nMotorEncoder[backRightDrive] = 0;
 
 	return;
+}
+
+float wheelRadius = 4 * 3.1415926535897932; //in inches.  (that's right, I memorized that many characters...)
+void moveInches(float value, int negitaveMod=1) {
+	moveRotations(value / wheelRadius, negitaveMod);  //converts inches to rotations.
 }
 
 bool hitLine = false;
@@ -205,35 +214,13 @@ task lookForLine {
 	}
 }
 
-float wheelRadius = 4 * 3.1415926535897932; //in inches.  (that's right, I memorized that many characters...)
-void moveInches(float value) {
-	moveRotations(value / wheelRadius);  //converts inches to rotations.
-}
-
-//rotates until over a certain gyro value.  //TODO: remove mod?
-void rotateUntilDegrees(float degrees, int speed, float mod=2) {
-  setLeftRightMoveSpeed(speed, -speed);
-
-	//check if over degrees.
-  if (degrees > 0) {
-    waitUntil(abs(SensorValue[gyro]) >= degrees - mod);
-  }
-  else {
-    waitUntil(abs(SensorValue[gyro]) <= degrees + mod);
-  }
-	setLeftRightMoveSpeed(-speed, speed);
-	wait1Msec(40);  //2polls
-
-  setLeftRightMoveSpeed();
-}
-
 // **GYRO TURN**
 // target (in degrees) is added/subtracted from current gyro reading to get a target gyro reading
 // run PD loop to turn to target
 // checks if target has been reached AND is at target for over 250ms before moving on
 void gyroTurn (int turnDirection, int targetDegrees, bool isDirectValue=false, int maxPower=92, int minPower=27, int timeOut=3000) {
 	// initialize PD loop variables
-	float kp = 0.28; // TO BE TUNED
+	float kp = 0.26; // TO BE TUNED
 	int error = targetDegrees;
 	int drivePower = 0;
 
@@ -243,7 +230,6 @@ void gyroTurn (int turnDirection, int targetDegrees, bool isDirectValue=false, i
 	bool atTarget = false;
 
 	// initialize gyro data variables
-	//int targetReading = isDirectValue == false ? SensorValue[gyro] : 0;  //test.
 	int targetReading = SensorValue[gyro];
 
 	// get gyroscope target reading
@@ -256,33 +242,28 @@ void gyroTurn (int turnDirection, int targetDegrees, bool isDirectValue=false, i
 	if (targetDegrees < 200) { kp = 0.2; }  //ok?
 
 	// run motors until target is within 1 degree certainty
-	while (!atTarget && (time1[T2] < timeOut))
-	{
+	while (!atTarget && (time1[T2] < timeOut)) {
 		error = targetReading - SensorValue[gyro]; 	// calculate error
 		drivePower = error * kp;	// calculate PD loop output  //speed
 
 		writeDebugStreamLine("error -> %d, gyro -> %d", error, SensorValue[gyro]);  //DEBUG: this
 
 		//keep speed between min and max power.
-		if(drivePower < minPower && drivePower > 0)  {
+		if(drivePower < minPower && drivePower > 0) {
 			drivePower = minPower;
 		}
-		else {
-			if(drivePower > -minPower && drivePower < 0)  {
-				drivePower = -minPower;
-			}
-		}
+		else if(drivePower > -minPower && drivePower < 0) {
+      drivePower = -minPower;
+    }
 
-		if(drivePower > maxPower)  {
+		if(drivePower > maxPower) {
 			drivePower = maxPower;
 		}
-		else {
-			if(drivePower < -maxPower)  {
-				drivePower = -maxPower;
-			}
-		}
+		else if(drivePower < -maxPower) {
+    	drivePower = -maxPower;
+    }
 
-		//send power to motors.
+		//send power to motors. //(also does straightening)
 		setLeftRightMoveSpeed(-drivePower, drivePower);
 
 		// check for finish
@@ -295,10 +276,10 @@ void gyroTurn (int turnDirection, int targetDegrees, bool isDirectValue=false, i
 
 	setLeftRightMoveSpeed();  //reset motors.
 
-	// reset kp
-	kp = 0.33;
+	// reset kp  wtf is this?  TODO: delete?
+	kp = 0.26;
 
-  return; //?
+  return; //I think I need this.
 }
 
 //value is in inches.
@@ -315,58 +296,7 @@ float getRFDistance (int precision=5, int pollingTime=40) {
 	return sumDistances / precision;
 }
 
-void pullBackDeprecated() {
-  //small jolt
-	moveLeftRightFor(150, -127, -127);
-	wait1Msec(150);
-
-  //small jolt
-	moveLeftRightFor(150, -127, -127);
-	wait1Msec(150);
-
-  //large pull
-	moveLeftRightFor(1500, -127, -127);
-	wait1Msec(150);
-
-  //large pull
-	moveLeftRightFor(1500, -127, -127);
-  wait1Msec(150);
-
-  //large pull
-	moveLeftRightFor(1500, -127, -127);
-  wait1Msec(150);
-
-  //large pull
-	moveLeftRightFor(3000, -127, -127);
-}
-
-///runs autonomous
-void runAutoDeprecated() {
-  /*Drop Goal*/
-	autoMoveGoalArms(-127);
-
-	/*Move Forwards*/
-	moveLeftRightFor(2200, 70, 70);
-
-	/*Pick Up Goal*/
-	autoMoveGoalArms(127);
-
-	/*Pull Out*/
-	moveLeftRightFor(2200, -70, -70);
-
-	/*Rotate ~ >180 Degrees*/
-  rotateUntilDegrees(180 * 7.5, 110);
-
-	/*Move to Place Goal*/
-	moveLeftRightFor(1500, 100, 100);
-
-	/*Drop Goal*/
-	autoMoveGoalArms(-127);
-
-	/*Move Away From Goal.*/
-  pullBackDeprecated();
-}
-
+///the real autonomous command.
 void runAuto() {
 	/*Drop Goal Arms*/
 	autoMoveGoalArms(-127);
@@ -379,6 +309,7 @@ void runAuto() {
 
 void pre_auton() {
 	gyroInit();
+  string startgame = "fun";  //Do not remove or script doesn't work anymore, I dunno why.
 }
 
 task autonomous	{
@@ -406,6 +337,8 @@ bool tempLock = false;
 bool isHoldingClaw = false;
 bool isGoalArmMovingDown = false;
 task usercontrol {
+  inTeleop = true;
+
 	writeDebugStreamLine("***************Start************");
 	writeDebugStreamLine("***************Start************");
 	writeDebugStreamLine("***************Start************");
@@ -433,6 +366,7 @@ task usercontrol {
 
 	writeDebugStreamLine("Done");
 
+  resetMoveMod(); //reset any mod before controller period so code doesn't fuck with victor.  Dont fuck with victor guys...
 	while(true) //TODO: set to true so loop goes.
 	{
 		/*Goal Arm*/
