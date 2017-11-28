@@ -33,16 +33,14 @@
 
 /*Other Scripts*/
 //#include "64008Z_auto_v2.c" //autonomous code.
+const string down = "down";
+const string up = "up";
 
 bool inTeleop = false;
 
 float currentTick = 0;
 
-//are there enums?  //TODO: prob not D:
-typedef enum {
-  up = 0,
-  down = 1,
-};
+//
 
 int roundToInt(float f) {  //rounds value to int.
   if(f>0)
@@ -68,9 +66,9 @@ void gyroInit() {
 }
 
 //TODO: TEST THIS.
-///direction = "up" for up and "down" (or litterally anything else) all lowercase.
-void autoMoveGoalArms(string direction) {
-	if(string == "up") {
+///direction = up(const) for up move and down(const) for down move.
+void autoMoveGoalArms(const string direction) {
+	if(direction == up) {
 		motor[goalHandLeft] = 127;
 		motor[goalHandRight] = 127;
     waitUntil(SensorValue[handsUp] == 1);
@@ -91,10 +89,28 @@ void setConePickUpSpeed (int val=0) {
 	motor[coneArmsInner] = val;
 }
 
-///*VERY IMPORTANT*: THIS MUST BE CALLED FOR STRAIGHTENING TO OCCUR.
-///sets the speed of the left and right sides of the drive.  Empty is not moving.
+float kp = 0.9;
+
+float errorVal = 0;
+
 int leftMod = 0;
 int rightMod = 0;
+void straightenMotors() {
+  //set offset value, if 0 both sides are moving at same speed.  use abs value for both motors, pretending both sides going forwards.
+  errorVal = (abs(nMotorEncoder[backLeftDrive]) - abs(nMotorEncoder[backRightDrive]));
+
+  //update both modifiers.
+  rightMod = (errorVal * kp);
+  leftMod = -rightMod;
+
+  //writeDebugStreamLine("The motor modifier of (mod = error[%d] * kp[%d]) is +[%d / 127] motor speed -> at tick %d", errorVal, kp, leftMod, currentTick);  //DEBUG: this
+  //writeDebugStreamLine("The error of (L - R) is %d degrees -> at tick %d", errorVal, currentTick);  //DEBUG: this
+}
+
+void resetMoveMod () { leftMod = 0; rightMod = 0; }  //small func.
+
+///*VERY IMPORTANT*: THIS MUST BE CALLED FOR STRAIGHTENING TO OCCUR.
+///sets the speed of the left and right sides of the drive.  Empty is not moving.
 void setLeftRightMoveSpeed(int leftSpeed=0, int rightSpeed=0) {
   if (inTeleop == false) {
     straightenMotors();
@@ -120,23 +136,6 @@ void setLeftRightMoveSpeed(int leftSpeed=0, int rightSpeed=0) {
 
 	//writeDebugStreamLine("L - R is %d - %d", leftSpeed + leftMod, rightSpeed + rightMod); //DEBUG: this
 }
-
-float kp = 0.9;
-
-float errorVal = 0;
-void straightenMotors() {
-  //set offset value, if 0 both sides are moving at same speed.  use abs value for both motors, pretending both sides going forwards.
-  error = (abs(nMotorEncoder[backLeftDrive]) - abs(nMotorEncoder[backRightDrive]));
-
-  //update both modifiers.
-  rightMod = (errorVal * kp);
-  leftMod = -rightMod;
-
-  //writeDebugStreamLine("The motor modifier of (mod = error[%d] * kp[%d]) is +[%d / 127] motor speed -> at tick %d", errorVal, kp, leftMod, currentTick);  //DEBUG: this
-  //writeDebugStreamLine("The error of (L - R) is %d degrees -> at tick %d", errorVal, currentTick);  //DEBUG: this
-}
-
-void resetMoveMod () { leftMod = 0; rightMod = 0; }  //small func.
 
 float encLVal = 0;
 float encRVal = 0;
@@ -299,7 +298,7 @@ float getRFDistance (int precision=5, int pollingTime=40) {
 ///the real autonomous command.
 void runAuto() {
 	/*Drop Goal Arms*/
-	autoMoveGoalArms(-127);
+	autoMoveGoalArms(down);
 
 	/*Move Forwards One Rotation*/
 	moveRotations(1, 100);
