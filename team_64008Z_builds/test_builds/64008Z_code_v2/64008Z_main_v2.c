@@ -109,14 +109,14 @@ void straightenMotors() {
 
 void resetMoveMod () { leftMod = 0; rightMod = 0; }  //small func.
 
-///*VERY IMPORTANT*: THIS MUST BE CALLED FOR STRAIGHTENING TO OCCUR.
-///sets the speed of the left and right sides of the drive.  Empty is not moving.
+//*VERY IMPORTANT*: THIS MUST BE CALLED FOR STRAIGHTENING TO OCCUR.
+//sets the speed of the left and right sides of the drive.  Empty is not moving.
 void setLeftRightMoveSpeed(int leftSpeed=0, int rightSpeed=0) {
   if (inTeleop == false) {
     straightenMotors();
   }  //make sure not to straighten motors while in teleop.  Don't fuck with Victor.
 
-	//left side
+	//left side, add positive mod.
 	motor[frontLeftDrive] = abs(leftSpeed) + leftMod;
   motor[backLeftDrive] = abs(leftSpeed) + leftMod;
   //if negitave, make negitave.
@@ -125,7 +125,7 @@ void setLeftRightMoveSpeed(int leftSpeed=0, int rightSpeed=0) {
     motor[backLeftDrive] *= -1;
   }
 
-	//right side
+	//right side, add positive mod.
 	motor[frontRightDrive] = abs(rightSpeed) + rightMod;
 	motor[backRightDrive] = abs(rightSpeed) + rightMod;
   //if negitave, make negitave.
@@ -144,7 +144,7 @@ float error = 0;
 //moves straight
 void moveRotations(float rotations, int negitaveMod=1, int maxPower=92, int minPower=27) {
 	//bool isForwards = false;
-	float kp = 0.3;  //new kp
+	float kp = 0.25;  //new kp
 	bool exitLoop = false;
 
 	encLVal = 0;
