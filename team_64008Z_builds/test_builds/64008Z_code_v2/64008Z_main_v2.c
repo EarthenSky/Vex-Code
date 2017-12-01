@@ -332,9 +332,15 @@ task autonomous	{
 	//runAuto();  //this calls the autonomous script.
 }
 
+float armError = 0;
+int armSpeed = 50;
+int degToMove = 170;
+
 bool tempLock = false;
 bool isHoldingClaw = false;
 bool isGoalArmMovingDown = false;
+bool inDropPos = false;
+bool moveArmToDrop = false;
 task usercontrol {
   inTeleop = true;
 
@@ -400,6 +406,15 @@ task usercontrol {
 			setConePickUpSpeed();
 		}
 
+		/*Move Arm to Drop Pos*/
+		if(vexRT[Btn8U] == 1) {
+			if(inDropPos == false) { moveArmToDrop = true; }
+			inDropPos = true;
+		}
+		else {
+			inDropPos = false;
+		}
+
 		/*Claws*/
 		if(vexRT[Btn6U] == 1)	{
 			motor[claw] = 127;
@@ -435,5 +450,25 @@ task usercontrol {
 
 		/*Tank Drive*/
 		setLeftRightMoveSpeed(vexRT[Ch3], vexRT[Ch2]);
+
+		/*Auto Move Arm To Drop Pos*/
+		float armKp = 2.2;
+		if(moveArmToDrop == true) {
+			armError = degToMove - SensorValue[encArm];  //finds distance left to go
+			armSpeed = armError * armKp;
+
+			setConePickUpSpeed(armSpeed);
+
+			if(armError < 0.5 && armError > 0.5) {  //If within 0.5 degrees of pos.
+				while (moveArmToDrop == true) {
+					//TODO: drop cone?
+
+					moveArmToDrop = false;
+				}
+
+			}
+
+		}
+
 	}
 }
