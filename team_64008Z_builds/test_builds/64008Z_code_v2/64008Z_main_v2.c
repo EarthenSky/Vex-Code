@@ -60,9 +60,9 @@ void gyroInit() {
 	wait1Msec(2000);
 
 	writeDebugStreamLine("Gyro Setup...");
-	//SensorScale[Gyro] = 260;
+	SensorScale[gyro] = 280;  // try this
 	SensorValue[gyro] = 0;
-	SensorFullCount[gyro] = 36000;
+	SensorFullCount[gyro] = 3600;  //not working, gyro is auto set to 3600.
 }
 
 //TODO: TEST THIS.
