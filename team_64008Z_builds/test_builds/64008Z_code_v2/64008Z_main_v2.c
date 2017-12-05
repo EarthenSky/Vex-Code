@@ -37,21 +37,19 @@
 //#include "64008Z_auto_v2.c" //autonomous code.
 const string down = "down";
 const string up = "up";
+const string completed = "completed";
 
-const float degreeMod = 278 / 360;
+const float mod_degrees = (278 / 360) * 10;  //multiply this with degrees to get
+
+const int dir_forwards = 1;
+const int dir_backwards = -1;
+
+const int dir_left = -1;
+const int dir_right = 1;
 
 bool inTeleop = false;
 
 float currentTick = 0;
-
-//
-
-int roundToInt(float f) {  //rounds value to int.
-  if(f>0)
-  	return (int)(f + 0.5);
-  else
-  	return (int)(f - 0.5);
-}
 
 ///initialize the gyroscope
 void gyroInit() {
@@ -64,14 +62,14 @@ void gyroInit() {
 	wait1Msec(2000);
 
 	writeDebugStreamLine("Gyro Setup...");
-	//SensorScale[gyro] = 2;  // try this
+	//SensorScale[gyro] = 278;  //?
 	SensorValue[gyro] = 0;
 	SensorFullCount[gyro] = 3600;  //not working? gyro is auto set to 3600.
 }
 
 //TODO: TEST THIS.
 ///direction = up(const) for up move and down(const) for down move.
-string armDirection = "null";
+string armParam = "null";
 task autoMoveGoalArms() {
 	if(armDirection == up) {
 		motor[goalHands] = 127;
@@ -82,19 +80,27 @@ task autoMoveGoalArms() {
     waitUntil(SensorValue[handsDown] == 1);
 	}
 
+  armParam = completed;
+
 	motor[goalHands] = 0;
 }
 
-string miniArmDirection = "null";
+//TODO: TEST THIS.
+//sensorPotentiometer:
+//~300 =  down
+//~15  =  up
+string miniArmParam = "null";
 task autoMoveMiniGoalArms() {
 	if(miniArmDirection == up) {
 		motor[pushGoalHand] = 127;
-    waitUntil(SensorValue[miniGoalPot] < 15);  //insert up pos here
+    waitUntil(SensorValue[miniGoalPot] <= 15);  //insert up pos here
 	}
 	else {
 		motor[pushGoalHand] = -127;
-    waitUntil(SensorValue[miniGoalPot] > 1);  //insert down pos here
+    waitUntil(SensorValue[miniGoalPot] > 300);  //insert down pos here
 	}
+
+  miniArmParam = completed;
 
 	motor[pushGoalHand] = 0;
 }
@@ -104,7 +110,7 @@ void setConePickUpSpeed (int val=0) {
 	motor[coneArms] = val;
 }
 
-float kp = 2;
+float kp = 2;  //Tune?
 
 float errorVal = 0;
 
@@ -170,7 +176,7 @@ float encRVal = 0;
 
 float error = 0;
 //moves straight
-void moveRotations(float rotations, int negitaveMod=1, int maxPower=70, int minPower=12, int maxTimeout=3000) {
+void moveRotations(float rotations, const int negitaveMod, int maxTimeout=3000, int maxPower=70, int minPower=12) {
 	//bool isForwards = false;
 	//float kp = 0.07;  //new kp
 	float kp = 0.22;  //new kp
@@ -239,10 +245,11 @@ void moveRotations(float rotations, int negitaveMod=1, int maxPower=70, int minP
 }
 
 float wheelRadius = 4 * 3.1415926535897932; //in inches.  (that's right, I memorized that many characters...)
-void moveInches(float value, int negitaveMod=1) {
-	moveRotations(value / wheelRadius, negitaveMod);  //converts inches to rotations.
+void moveInches(float inches, const int negitaveMod=forwards, int maxTimeout=3000) {
+	moveRotations(inches / wheelRadius, negitaveMod);  //converts inches to rotations.
 }
 
+//NOT DONE
 bool hitLine = false;
 task lookForLine {
 	//set hitLine to not have been hit.
@@ -258,7 +265,7 @@ task lookForLine {
 // target (in degrees) is added/subtracted from current gyro reading to get a target gyro reading
 // run PD loop to turn to target
 // checks if target has been reached AND is at target for over 250ms before moving on
-void gyroTurn (int turnDirection, int targetDegrees, bool isDirectValue=false, int maxPower=80, int minPower=23, int timeOut=3000) {
+void gyroTurn (int turnDirection, int targetDegrees, int maxPower=80, int minPower=23, int timeOut=3000) {
 	// initialize PD loop variables
 	float kp = 0.22; // TO BE TUNED
 	int error = targetDegrees;
@@ -325,6 +332,7 @@ void gyroTurn (int turnDirection, int targetDegrees, bool isDirectValue=false, i
   return; //I think I need this.
 }
 
+//NOT DONE
 //value is in inches.
 //precision is for how accurate the value is going to be.  More accurate -> longer time to get value.
 float getRFDistance (int precision=5, int pollingTime=40) {
@@ -340,15 +348,82 @@ float getRFDistance (int precision=5, int pollingTime=40) {
 }
 
 ///the real autonomous command.
-void runAuto() {
-	/*Drop Goal Arms and Drive Into G1*/
-	armDirection = down;
-	startTask(autoMoveGoalArms);
+void runAutoSkills() {
 
-	/*Move Forwards One Rotation*/
-	moveRotations(1, 100);
+  ///So far code moves robot to pick up and place two goals
+  ///this gives 30 pts.
+  ///
 
-	/**/
+	/*Drop goal arm & mini goal arm + Drive into G1*/
+	armParam = down; startTask(autoMoveGoalArms);
+  miniArmParam = down; startTask(autoMoveMiniGoalArms);
+	moveInches(42, dir_forwards);
+
+  /*Large goal up + Drive into G2*/
+  armParam = up; startTask(autoMoveGoalArms);
+  moveInches(36, dir_forwards);
+
+  /*Mini goal up + Drive into P1*/
+  miniArmParam = up; startTask(autoMoveMiniGoalArms);
+  moveInches(31.2, dir_forwards);
+
+  /*Rotate 90 deg left*/
+  gyroTurn(dir_left, 90 * mod_degrees);
+
+  /*Drive to P2*/
+  moveInches(16.56, dir_forwards);
+
+  /*Rotate 90 deg right*/
+  gyroTurn(dir_right, 90 * mod_degrees);
+
+  /*Drive to 20pt goal*/
+  moveInches(29.76, dir_forwards);
+
+  /*Mini goal down*/
+  miniArmParam = down; startTask(autoMoveMiniGoalArms);
+  waitUntil(miniArmParam == completed);
+
+  /*Pull back into 10pt goal*/
+  moveInches(12.36, dir_backwards);
+
+  /*Large goal down*/
+  armParam = down; startTask(autoMoveGoalArms);
+  waitUntil(armParam == completed);
+
+  /*Pull back to P2*/
+  moveInches(17.4, dir_backwards);
+
+  /*Ore wo dare da to omotte yagaru?!*/
+}
+
+void runAutoComp() {
+
+  ///So far code gets 7/9 pts, gets one goal in 5 pts and parks
+  /// TODO: do arm thing.
+
+	/*Drop goal arm & mini goal arm + Drive into G5*/
+	armParam = down; startTask(autoMoveGoalArms);
+  miniArmParam = down; startTask(autoMoveMiniGoalArms);
+	moveInches(57.6, dir_forwards);
+
+  /*Large goal up*/
+  armParam = up; startTask(autoMoveGoalArms);
+  waitUntil(armParam == completed);
+
+  /*Rotate 180 deg left*/
+  gyroTurn(dir_left, 180 * mod_degrees);
+
+  /*Drive into 5pt goal*/
+  moveInches(50.4, dir_forwards);
+
+  /*Large goal down*/
+  armParam = down; startTask(autoMoveGoalArms);
+  waitUntil(armParam == completed);
+
+  /*Pull back and park*/
+  moveInches(50.4, dir_backwards);
+
+  /*Ore wo dare da to omotte yagaru?!*/
 }
 
 void pre_auton() {
@@ -374,7 +449,7 @@ task autonomous	{
 	moveRotations(6, -1);
 	wait1Msec(2000);*/
 
-	runAuto();  //this calls the autonomous script.
+	runAutoSkills();  //this calls the autonomous script.
 }
 
 float armError = 0;
@@ -391,33 +466,11 @@ task usercontrol {
 	writeDebugStreamLine("***************Start************");
 	writeDebugStreamLine("***************Start************");
 	writeDebugStreamLine("***************Start************");
-	resetEncoders();
-
-	//moveRotations(2);
-	//wait1Msec(1000);
-
-	//moveRotations(2, -1);
-	//wait1Msec(1000);
-
-	//moveRotations(2);
-	//wait1Msec(1000);
-
-	//moveRotations(2, -1);
-	//wait1Msec(1000);*/
-
-	//gyroTurn(1, 90);
-
-	//gyroTurn(-1, 2780);
-	//wait1Msec(1000);
-
-	//gyroTurn(1, 3600 * degreeMod);
-	//wait1Msec(1000);
 
 	writeDebugStreamLine("Done");
 	inTeleop = true;
   resetMoveMod(); //just no encs during user k?
-	while(true) //TODO: set to true so loop goes.
-	{
+	while(true) {
 		/*Goal Arm*/
 		if(vexRT[Btn8R] == 1)	{
 			isGoalArmMovingDown = true;
