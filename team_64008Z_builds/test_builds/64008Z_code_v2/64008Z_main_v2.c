@@ -34,10 +34,11 @@
 #include "Vex_Competition_Includes.c" //backcode no modify pls.
 
 /*Other Scripts*/
-//#include "64008Z_auto_v2.c" //autonomous code.
+#include "64008Z_auto_v2.c" //autonomous code.
 const int down = 1;
 const int up = 2;
-const int completed = 3;
+const int mid = 3;
+const int completed = 4;
 
 const float mod_degrees = (278 / 360) * 10;  //multiply this with degrees to get
 
@@ -46,6 +47,8 @@ const int dir_backwards = -1;
 
 const int dir_left = -1;
 const int dir_right = 1;
+
+const float wheelCircumference = 4 * 3.1415926535897932; //in inches.  (that's right, I memorized that many characters...)
 
 bool inTeleop = false;
 
@@ -87,17 +90,29 @@ task autoMoveGoalArms() {
 
 //TODO: TEST THIS.
 //sensorPotentiometer:
-//~300 =  down
-//~15  =  up
+const int pot_up = 4095;
+const int pot_down = 1905;
+const int pot_no_ground = 2200;
+
 int miniArmParam = 0;
 task autoMoveMiniGoalArms() {
 	if(miniArmParam == up) {
 		motor[pushGoalHand] = 127;
-    waitUntil(SensorValue[miniGoalPot] <= 15);  //insert up pos here
+    waitUntil(SensorValue[miniGoalPot] >= pot_up);  //insert up pos here
 	}
-	else {
+	else if(miniArmParam == down) {
 		motor[pushGoalHand] = -127;
-    waitUntil(SensorValue[miniGoalPot] > 300);  //insert down pos here
+    waitUntil(SensorValue[miniGoalPot] <= pot_down);  //insert down pos here
+	}
+	else if (miniArmParam == mid) {
+		if(SensorValue[miniGoalPot] < pot_no_ground) {
+			motor[pushGoalHand] = 127;
+			waitUntil(SensorValue[miniGoalPot] >= pot_no_ground);
+		}
+		else {
+			motor[pushGoalHand] = -127;
+			waitUntil(SensorValue[miniGoalPot] <= pot_no_ground);
+		}
 	}
 
   miniArmParam = completed;
@@ -174,13 +189,14 @@ void resetEncoders() {
 float encLVal = 0;
 float encRVal = 0;
 
-float error = 0;
 //moves straight
 void moveRotations(float rotations, const int negitaveMod, int maxTimeout=3000, int maxPower=70, int minPower=12) {
 	//bool isForwards = false;
 	//float kp = 0.07;  //new kp
 	float kp = 0.22;  //new kp
 	bool exitLoop = false;
+
+	float error = 0;
 
 	encLVal = 0;
 	encRVal = 0;
@@ -218,10 +234,6 @@ void moveRotations(float rotations, const int negitaveMod, int maxTimeout=3000, 
 
 		setLeftRightMoveSpeed(speed * negitaveMod, speed * negitaveMod);  //move forwards (also does straightening)
 
-		/*if (error <= 0) { //case: loop is done motor is at (or past) correct position.
-			//exitLoop = true; //loop exit.
-		}*/
-
 		// check for finish
 		if (abs(error) > 5) 	// if robot is within 5 degree wheel rotations and timer flag is off
 			clearTimer(T1);			// start a timer
@@ -229,11 +241,8 @@ void moveRotations(float rotations, const int negitaveMod, int maxTimeout=3000, 
 		if (time1(T1) >= 90)	// if the timer is over 90ms and timer flag is true (3 ticks)
 			exitLoop = true;	// set boolean to complete while loop
 
-    currentTick++;  //DEBUG: to find ticks
-		wait1Msec(30);  //loop speed.
+		wait1Msec(20);  //loop speed.
 	}
-
-	currentTick = 0;
 
 	setLeftRightMoveSpeed(); //turn off motors.
 
@@ -244,9 +253,72 @@ void moveRotations(float rotations, const int negitaveMod, int maxTimeout=3000, 
 	return;
 }
 
-float wheelRadius = 4 * 3.1415926535897932; //in inches.  (that's right, I memorized that many characters...)
+void moveStraightGyro(float inches, const int negitaveMod=dir_forwards, int maxTimeout=5000, int maxPower=102, int minPower=17) {
+	float disKp = 0.22;  //distance kp.
+	float gyroKp = 2.2;
+
+	float error = 0;
+	float gyroError = SensorValue[gyro];
+
+	int sideMod = 0;
+
+	clearTimer(T3);  //start timer
+
+  float speed = 0;
+
+	//init encoders
+	nMotorEncoder[backLeftDrive] = 0;
+	nMotorEncoder[backRightDrive] = 0;
+
+	bool exitLoop = false;
+	while(exitLoop == false && time1(T3) < maxTimeout) {
+		float encAvgLR = (abs(nMotorEncoder[backLeftDrive]) + abs(nMotorEncoder[backRightDrive])) / 2;
+
+		error = abs(inches / wheelCircumference * 360) - encAvgLR;  //how close to completed.
+    speed = error * disKp;
+
+    writeDebugStreamLine("speed is %d, error2 is %d", speed, error); //DEBUG: this
+
+    gyroError -= SensorValue[gyro];
+    sideMod = gyroError * gyroKp;
+
+    //keep speed between min and max power.
+    if(speed < minPower && speed > 0) {
+  		speed = minPower;
+  	} else if(speed > -minPower && speed < 0) {
+      speed = -minPower;
+    }
+
+  	if(speed > maxPower) {
+  		speed = maxPower;
+  	} else if(speed < -maxPower) {
+      speed = -maxPower;
+    }
+
+		setLeftRightMoveSpeed((speed * sideMod) * negitaveMod, (speed * -sideMod) * negitaveMod);  //move forwards (also does straightening)
+
+		// check for finish
+		if (abs(error) > 5) 	// if robot is within 5 degree wheel rotations and timer flag is off
+			clearTimer(T1);			// start a timer
+
+		if (time1(T1) >= 90)	// if the timer is over 90ms and timer flag is true (3 ticks)
+			exitLoop = true;	// set boolean to complete while loop
+
+    currentTick++;  //DEBUG: to find ticks
+		wait1Msec(20);  //loop speed.
+	}
+
+	setLeftRightMoveSpeed(); //turn off motors.
+
+  //remove distance that was supposed to be moved.
+	nMotorEncoder[backLeftDrive] = 0;
+	nMotorEncoder[backRightDrive] = 0;
+
+	return;
+}
+
 void moveInches(float inches, const int negitaveMod=dir_forwards, int maxTimeout=3000) {
-	moveRotations(inches / wheelRadius, negitaveMod);  //converts inches to rotations.
+	moveRotations(inches / wheelCircumference, negitaveMod);  //converts inches to rotations.
 }
 
 //NOT DONE
@@ -437,13 +509,19 @@ task autonomous	{
 
 float armError = 0;
 int armSpeed = 50;
-int degToMove = 170;
+int degToMove = -100;
+float armKp = 1.5;
+
+bool clawClosed = false;
 
 bool tempLock = false;
 bool isHoldingClaw = false;
 bool isGoalArmMovingDown = false;
 bool inDropPos = false;
 bool moveArmToDrop = false;
+
+task coneDrop { wait1Msec(500); moveArmToDrop = false; }
+
 task usercontrol {
 	writeDebugStreamLine("***************Start************");
 	writeDebugStreamLine("***************Start************");
@@ -474,10 +552,10 @@ task usercontrol {
 
 		/*Cone Arm*/
 		if(vexRT[Btn5U] == 1)	{
-			setConePickUpSpeed(110);
+			setConePickUpSpeed(100);
 		}
 		else if (vexRT[Btn5D] == 1) {
-			setConePickUpSpeed(-110);
+			setConePickUpSpeed(-100);
 		}
 		else {
 			setConePickUpSpeed();
@@ -485,7 +563,10 @@ task usercontrol {
 
 		/*Move Arm to Drop Pos*/
 		if(vexRT[Btn8U] == 1) {
-			if(inDropPos == false) { moveArmToDrop = true; }
+			if(inDropPos == false) {
+				moveArmToDrop = true;
+				armError = 0;
+			}
 			inDropPos = true;
 		}
 		else {
@@ -496,18 +577,29 @@ task usercontrol {
 		if(vexRT[Btn6U] == 1)	{
 			motor[claw] = 127;
 			isHoldingClaw = false;
+
+			if(clawClosed == false) { //stop arm movement is called once when the button is first pressed.
+				if(moveArmToDrop == true) {
+					startTask(coneDrop);
+				}
+			}
+
+			clawClosed = true;
+
 		}
 		else if (vexRT[Btn6D] == 1) {
-			motor[claw] = -127;
 			isHoldingClaw = true;
+
+			motor[claw] = -127;
 		}
 		else {
+			clawClosed = false;
 			//keeps pressure on the cone when picked up.
 			if(isHoldingClaw == true) {
-				motor[claw] = 0;  //TODO: change value down or up if pressure is wrong.
+				motor[claw] = -10;  //TODO: change value down or up if pressure is wrong.
 			}
 			else {
-				motor[claw] = 10;
+				motor[claw] = 0;
 			}
 		}
 
@@ -525,23 +617,17 @@ task usercontrol {
 		setLeftRightMoveSpeed(vexRT[Ch3], vexRT[Ch2]);
 
 		/*Auto Move Arm To Drop Pos*/
-		float armKp = 2.2;
 		if(moveArmToDrop == true) {
-			armError = degToMove - SensorValue[encArm];  //finds distance left to go
+			armError = degToMove + SensorValue[encArm];  //finds distance left to go
 			armSpeed = armError * armKp;
 
 			setConePickUpSpeed(armSpeed);
 
-			if(armError < 0.5 && armError > 0.5) {  //If within 0.5 degrees of pos.
-				while (moveArmToDrop == true) {  //take out while loop
-					//TODO: drop cone?
-					motor[claw] = -127;
-					wait1Msec(500);
-					motor[claw] = 0;
-					moveArmToDrop = false;
-				}
-			}
+			//if(armError < 0.5 && armError > 0.5) {  //If within 0.5 degrees of pos.
+			//}
 		}
+
+		writeDebugStreamLine("gyro is %d", SensorValue[gyro]);  //DEBUG: this
 
 		//let everything update
 		wait1Msec(20);  //TODO: remove?
