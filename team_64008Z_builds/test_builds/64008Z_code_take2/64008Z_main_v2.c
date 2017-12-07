@@ -34,40 +34,36 @@
 #include "Vex_Competition_Includes.c" //backcode no modify pls.
 
 /*Other Scripts*/
-#include "64008Z_auto_v2.c" //autonomous code.
+//#include "64008Z_auto_v2.c" //autonomous code.
 const int down = 1;
 const int up = 2;
 const int mid = 3;
 const int completed = 4;
 
-const float mod_degrees = (278 / 360) * 10;  //multiply this with degrees to get
-
 const int dir_forwards = 1;
 const int dir_backwards = -1;
-
 const int dir_left = -1;
 const int dir_right = 1;
 
-const float wheelCircumference = 4 * 3.1415926535897932; //in inches.  (that's right, I memorized that many characters...)
+const float mod_degrees = (278 / 360) * 10;  //multiply this with degrees to get
+const float mod_wheel_circumference = 4 * 3.1415926535897932; //in inches.  (that's right, I memorized that many characters...)
 
 bool inTeleop = false;
 
-float currentTick = 0;
-
 ///initialize the gyroscope
 void gyroInit() {
-	writeDebugStreamLine("Gyro Reset.");
+	//writeDebugStreamLine("Gyro Reset.");
 	SensorType[gyro] = sensorNone;
 	wait1Msec(1000);
 
-	writeDebugStreamLine("Gyro Assign..");
+	//writeDebugStreamLine("Gyro Assign..");
 	SensorType[gyro] = sensorGyro;
 	wait1Msec(2000);
 
-	writeDebugStreamLine("Gyro Setup...");
+	//writeDebugStreamLine("Gyro Setup...");
 	//SensorScale[gyro] = 278;  //?
 	SensorValue[gyro] = 0;
-	SensorFullCount[gyro] = 3600;  //not working? gyro is auto set to 3600.
+	SensorFullCount[gyro] = 3600;  //not working? gyro is auto set to 3600. dunno dont care.
 }
 
 //TODO: TEST THIS.
@@ -78,7 +74,7 @@ task autoMoveGoalArms() {
 		motor[goalHands] = 127;
     waitUntil(SensorValue[handsUp] == 1);
 	}
-	else {
+	else(armParam == down) {
 		motor[goalHands] = -127;
     waitUntil(SensorValue[handsDown] == 1);
 	}
@@ -92,8 +88,9 @@ task autoMoveGoalArms() {
 //sensorPotentiometer:
 const int pot_up = 4095;
 const int pot_down = 1905;
-const int pot_no_ground = 2200;
+const int pot_no_ground = 2150;
 
+//not super accurate (doesn't need to be.)
 int miniArmParam = 0;
 task autoMoveMiniGoalArms() {
 	if(miniArmParam == up) {
@@ -120,11 +117,6 @@ task autoMoveMiniGoalArms() {
 	motor[pushGoalHand] = 0;
 }
 
-///sets cone pickup speed.  Empty is not moving.
-void setConePickUpSpeed (int val=0) {
-	motor[coneArms] = val;
-}
-
 float kp = 2;  //Tune?
 
 float errorVal = 0;
@@ -139,8 +131,8 @@ void straightenMotors() {
   rightMod = (errorVal * kp);
   leftMod = -rightMod;
 
-  writeDebugStreamLine("mod = error[%d] * kp[%d] = +[%d] -> at tick %d", errorVal, kp, leftMod, currentTick);  //DEBUG: this
-  //writeDebugStreamLine("The error of (L - R) is %d degrees -> at tick %d", errorVal, currentTick);  //DEBUG: this
+  writeDebugStreamLine("mod = error[%d] * kp[%d] = +[%d]", errorVal, kp, leftMod);  //DEBUG: this
+  //writeDebugStreamLine("The error of (L - R) is %d degrees", errorVal);  //DEBUG: this
 }
 
 void resetMoveMod () { leftMod = 2; rightMod = -2; }  //small func.
@@ -274,7 +266,7 @@ void moveStraightGyro(float inches, const int negitaveMod=dir_forwards, int maxT
 	while(exitLoop == false && time1(T3) < maxTimeout) {
 		float encAvgLR = (abs(nMotorEncoder[backLeftDrive]) + abs(nMotorEncoder[backRightDrive])) / 2;
 
-		error = abs(inches / wheelCircumference * 360) - encAvgLR;  //how close to completed.
+		error = abs(inches / mod_wheel_circumference * 360) - encAvgLR;  //how close to completed.
     speed = error * disKp;
 
     writeDebugStreamLine("speed is %d, error2 is %d", speed, error); //DEBUG: this
@@ -304,7 +296,6 @@ void moveStraightGyro(float inches, const int negitaveMod=dir_forwards, int maxT
 		if (time1(T1) >= 90)	// if the timer is over 90ms and timer flag is true (3 ticks)
 			exitLoop = true;	// set boolean to complete while loop
 
-    currentTick++;  //DEBUG: to find ticks
 		wait1Msec(20);  //loop speed.
 	}
 
@@ -318,7 +309,7 @@ void moveStraightGyro(float inches, const int negitaveMod=dir_forwards, int maxT
 }
 
 void moveInches(float inches, const int negitaveMod=dir_forwards, int maxTimeout=3000) {
-	moveRotations(inches / wheelCircumference, negitaveMod);  //converts inches to rotations.
+	moveRotations(inches / mod_wheel_circumference, negitaveMod);  //converts inches to rotations.
 }
 
 //NOT DONE
@@ -535,81 +526,63 @@ task usercontrol {
 		/*Goal Arm*/
 		if(vexRT[Btn8R] == 1)	{
 			isGoalArmMovingDown = true;
-		}
-		else if (vexRT[Btn8D] == 1 ) {
+		} else if (vexRT[Btn8D] == 1 ) {
 			isGoalArmMovingDown = false;
 		}
 
 		if(isGoalArmMovingDown == true && SensorValue[handsDown] == 0) {
 			motor[goalHands] = -127;
-		}
-		else if (isGoalArmMovingDown == false && SensorValue[handsUp] == 0){
+		} else if (isGoalArmMovingDown == false && SensorValue[handsUp] == 0){
 			motor[goalHands] = 127;
-		}
-		else {
+		} else {
 			motor[goalHands] = 0;
 		}
 
 		/*Cone Arm*/
 		if(vexRT[Btn5U] == 1)	{
-			setConePickUpSpeed(100);
-		}
-		else if (vexRT[Btn5D] == 1) {
-			setConePickUpSpeed(-100);
-		}
-		else {
-			setConePickUpSpeed();
+			motor[coneArms] = 100;
+		} else if (vexRT[Btn5D] == 1) {
+			motor[coneArms] = -100;
+		} else {
+			motor[coneArms] = 0;
 		}
 
 		/*Move Arm to Drop Pos*/
 		if(vexRT[Btn8U] == 1) {
-			if(inDropPos == false) {
-				moveArmToDrop = true;
-				armError = 0;
-			}
+			if(inDropPos == false) { moveArmToDrop = true; }
 			inDropPos = true;
-		}
-		else {
+		} else {
 			inDropPos = false;
 		}
 
 		/*Claws*/
 		if(vexRT[Btn6U] == 1)	{
-			motor[claw] = 127;
 			isHoldingClaw = false;
+			motor[claw] = 127;
 
-			if(clawClosed == false) { //stop arm movement is called once when the button is first pressed.
-				if(moveArmToDrop == true) {
-					startTask(coneDrop);
-				}
+			if(clawClosed == false) {  //stop arm movement is called once when the button is first pressed.
+				if(moveArmToDrop == true) { startTask(coneDrop); }
 			}
-
 			clawClosed = true;
 
-		}
-		else if (vexRT[Btn6D] == 1) {
+		} else if (vexRT[Btn6D] == 1) {
 			isHoldingClaw = true;
-
 			motor[claw] = -127;
-		}
-		else {
+		} else {
 			clawClosed = false;
 			//keeps pressure on the cone when picked up.
 			if(isHoldingClaw == true) {
 				motor[claw] = -10;  //TODO: change value down or up if pressure is wrong.
-			}
-			else {
+			} else {
 				motor[claw] = 0;
 			}
 		}
 
 		if(vexRT[Btn7L] == 1)	{
 			motor[pushGoalHand] = 127;
-		}
-		else if(vexRT[Btn7D] == 1) {
+		} else if(vexRT[Btn7D] == 1) {
 			motor[pushGoalHand] = -127;
-		}
-		else {
+		} else {
 			motor[pushGoalHand] = 0;
 		}
 
