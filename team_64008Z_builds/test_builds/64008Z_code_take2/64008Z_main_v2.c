@@ -74,7 +74,7 @@ task autoMoveGoalArms() {
 		motor[goalHands] = 127;
     waitUntil(SensorValue[handsUp] == 1);
 	}
-	else(armParam == down) {
+	else if(armParam == down) {
 		motor[goalHands] = -127;
     waitUntil(SensorValue[handsDown] == 1);
 	}
