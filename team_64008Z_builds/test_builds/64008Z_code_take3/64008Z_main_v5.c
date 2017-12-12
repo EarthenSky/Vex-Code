@@ -243,9 +243,9 @@ void moveStraightGyro(float inches, const int negitaveMod=dir_forwards, int maxT
     writeDebugStreamLine("speed is %d, error is %d, sideMod is %d, enc is %d, gyroerr is %d", speed, error, sideMod, nMotorEncoder[backLeftDrive], gyroError); //DEBUG: this
 
     //keep speed between min and max power.
-		speed = capMinMax(speed, minPower, maxPower);
+		//speed = capMinMax(speed, minPower, maxPower);
 
-		//setLeftRightMoveSpeed((speed - sideMod * (speed/127)) * negitaveMod, (speed + sideMod * (speed/127)) * negitaveMod);  //move forwards (also does straightening)
+		setLeftRightMoveSpeed((speed - sideMod * (speed/127)) * negitaveMod, (speed + sideMod * (speed/127)) * negitaveMod);  //move forwards (also does straightening)
 
 		setLeftRightMoveSpeed(speed * negitaveMod, speed * negitaveMod);
 
@@ -275,7 +275,7 @@ void moveStraightGyro(float inches, const int negitaveMod=dir_forwards, int maxT
 //run PD loop to turn to target deg.
 void rotateTo (int turnDirection, int targetDegrees, int maxPower=120, int minPower=22, int timeOut=3000) {
 	// initialize PD loop variables
-	float kp = 0.15; // TODO: tune this.
+	float kp = 0.12; // TODO: tune this. still smaller?
 	int error = targetDegrees;
 	int drivePower = 0;
 
@@ -454,41 +454,6 @@ void runAutoCompBottom() {
 
 //has a rotation different.
 void runAutoCompTop() {
-
-  ///So far code gets 9/9 pts, gets one goal in 5 pts and parks.  TODO: test.
-
-	/*Raise cone arm*/
-	motor[coneArms] = -80;
-	wait1Msec(60);  //3 ticks.
-
-	/*Drop goal arm & mini goal arm + Drive into G5*/
-	armParam = down; startTask(autoMoveGoalArms);
-  //miniArmParam = down; startTask(autoMoveMiniGoalArms);
-	moveStraightGyro(57.6, dir_forwards);
-
-	/*Stop cone arm*/
-	motor[coneArms] = 0;
-
-  /*Large goal up*/
-  armParam = up; startTask(autoMoveGoalArms);
-  waitUntil(armParam == completed);
-
-  /*Rotate 180 deg right*/
-  rotateTo(dir_right, 180 * mod_degrees);
-
-	/*Score cone*/
-	autoScoreCone();
-
-  /*Drive into 5pt goal*/
-  moveStraightGyro(50.4, dir_forwards);
-
-  /*Large goal down*/
-  armParam = down; startTask(autoMoveGoalArms);
-  waitUntil(armParam == completed);
-
-  /*Pull back and park*/
-  moveStraightGyro(50.4, dir_backwards);
-
   /*Ore wo dare da to omotte yagaru?!*/
 }
 
@@ -519,7 +484,7 @@ int goalArmPos = 0;
 bool isHoldingClaw = false;
 bool clawClosed = false;
 
-int miniGoalHoldVal = 3000;
+int miniGoalHoldVal = 1675;
 
 task usercontrol {
 	writeDebugStreamLine("***************Start************");
@@ -527,8 +492,14 @@ task usercontrol {
 	writeDebugStreamLine("***************Start************");
 	writeDebugStreamLine("***************Start************");
 
-	//moveStraightGyro(18, dir_forwards);
-	//wait1Msec(1000);
+	/*Rotate 180 deg left*/
+  //rotateTo(dir_left, 2780/2);
+
+  /*Rotate 180 deg left*/
+  //rotateTo(dir_right, 2780/2);
+
+	moveStraightGyro(24, dir_forwards);
+	wait1Msec(1000);
 
 	//moveStraightGyro(18, dir_backwards);
 	//wait1Msec(1000);
@@ -596,9 +567,10 @@ task usercontrol {
 		} else if(vexRT[Btn7D] == 1) {
 			motor[pushGoalHand] = -127;
 			miniGoalHoldVal = SensorValue[miniGoalPot];
+		} else if(vexRT[Btn7U] == 1) {
+			miniGoalHoldVal = 1675;
 		} else {
 			motor[pushGoalHand] = (miniGoalHoldVal - SensorValue[miniGoalPot]) * -0.2;
-			//motor[pushGoalHand] =0;
 		}
 
 		/*Tank Drive*/
