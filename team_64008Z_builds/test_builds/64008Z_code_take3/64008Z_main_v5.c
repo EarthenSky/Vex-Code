@@ -25,10 +25,10 @@
 
 const int bot_auton = 0;
 const int top_auton = 1;
-const int skills_auton = 1;
+const int skills_auton = 2;
 
 /*Auto Type*/
-const int autonType = bot_auton;
+const int autonType = skills_auton;
 
 /*Compo Init*/
 #pragma platform(VEX);
@@ -124,7 +124,7 @@ task autoMoveGoalArms() {
 //TODO: TEST THIS.
 //sensorPotentiometer:
 const int pot_up = 4095;
-const int pot_down = 1905;
+const int pot_down = 1675;
 const int pot_no_ground = 2150;
 
 //not super accurate (doesn't need to be.)
@@ -133,21 +133,21 @@ task autoMoveMiniGoalArms() {
 	clearTimer(T3);
 
 	if(miniArmParam == up) {
-		motor[pushGoalHand] = 127;
-    waitUntil(SensorValue[miniGoalPot] >= pot_up || time1(T3) >= task_time_limit);  //insert up pos here
+		while(miniArmParam != stopAutoCorrect) {
+			motor[pushGoalHand] = capMinMax(-0.2 * (pot_up - SensorValue[miniGoalPot]), 2, 127);
+			wait1Msec(20);
+		}
 	}
 	else if(miniArmParam == down) {
-		motor[pushGoalHand] = -127;
-    waitUntil(SensorValue[miniGoalPot] <= pot_down || time1(T3) >= task_time_limit);  //insert down pos here
+		while(miniArmParam != stopAutoCorrect) {
+			motor[pushGoalHand] = capMinMax(-0.2 * (pot_down - SensorValue[miniGoalPot]), 2, 127);
+			wait1Msec(20);
+		}
 	}
 	else if (miniArmParam == mid) {
-		if(SensorValue[miniGoalPot] < pot_no_ground) {
-			motor[pushGoalHand] = 127;
-			waitUntil(SensorValue[miniGoalPot] >= pot_no_ground || time1(T3) >= task_time_limit);
-		}
-		else {
-			motor[pushGoalHand] = -127;
-			waitUntil(SensorValue[miniGoalPot] <= pot_no_ground || time1(T3) >= task_time_limit);
+		while(miniArmParam != stopAutoCorrect) {
+			motor[pushGoalHand] = capMinMax(-0.2 * (pot_no_ground - SensorValue[miniGoalPot]), 2, 127);
+			wait1Msec(20);
 		}
 	}
 
@@ -209,17 +209,17 @@ void setLeftRightMoveSpeed(int leftSpeed=0, int rightSpeed=0) {
 }
 
 void resetEncoders() {
-	nMotorEncoder[backLeftDrive] = 0;
+	nMotorEncoder[backBackLeftDrive] = 0;
 	nMotorEncoder[backRightDrive] = 0;
 }
 
-void moveStraightGyro(float inches, const int negitaveMod=dir_forwards, int maxTimeout=175, int maxPower=102, int minPower=17) {
-	float disKp = 0.28;  //distance kp.  //was 0.22
-	float gyroKp = 5;
+void moveStraightGyro(float inches, const int negitaveMod=dir_forwards, float gyroInitVal=SensorValue[gyro], int maxTimeout=250, int maxPower=102, int minPower=17) {
+	float disKp = 0.24; //distance kp.  //was 0.22
+	if(inches <= 12) { disKp = 0.3; }
+	float gyroKp = 2.9;
 
 	float error = 0;
 
-	float gyroInitVal = SensorValue[gyro];
 	float gyroError = 0;
 
 	int sideMod = 0;
@@ -232,10 +232,10 @@ void moveStraightGyro(float inches, const int negitaveMod=dir_forwards, int maxT
 
 	bool exitLoop = false;
 	while(exitLoop == false && ticks < maxTimeout) {
-		float encAvgLR = (abs(nMotorEncoder[backLeftDrive]));
+		float encAvgLR = (abs(nMotorEncoder[backBackLeftDrive]) + abs(nMotorEncoder[backLeftDrive])) / 2;
 
-		error = (abs(inches / mod_wheel_circumference * 370/2) - encAvgLR);  //how close to completed.  // 370 is one rot
-    speed = error * disKp;
+		error = (abs(inches / mod_wheel_circumference * (380/2)) - encAvgLR);  //how close to completed.  // 370 is one rot
+    speed = error * disKp;  //error^1.5/1024(scaled) = speed
 
     gyroError = gyroInitVal - SensorValue[gyro];
     sideMod = gyroError * gyroKp;
@@ -243,11 +243,11 @@ void moveStraightGyro(float inches, const int negitaveMod=dir_forwards, int maxT
     writeDebugStreamLine("speed is %d, error is %d, sideMod is %d, enc is %d, gyroerr is %d", speed, error, sideMod, nMotorEncoder[backLeftDrive], gyroError); //DEBUG: this
 
     //keep speed between min and max power.
-		//speed = capMinMax(speed, minPower, maxPower);
+		speed = capMinMax(speed, minPower, maxPower);
 
 		setLeftRightMoveSpeed((speed - sideMod * (speed/127)) * negitaveMod, (speed + sideMod * (speed/127)) * negitaveMod);  //move forwards (also does straightening)
 
-		setLeftRightMoveSpeed(speed * negitaveMod, speed * negitaveMod);
+		//setLeftRightMoveSpeed(speed * negitaveMod, speed * negitaveMod);
 
 		writeDebugStreamLine("speed is %d, error is %d, sideMod is %d", speed, error, sideMod); //DEBUG: this
 
@@ -275,7 +275,7 @@ void moveStraightGyro(float inches, const int negitaveMod=dir_forwards, int maxT
 //run PD loop to turn to target deg.
 void rotateTo (int turnDirection, int targetDegrees, int maxPower=120, int minPower=22, int timeOut=3000) {
 	// initialize PD loop variables
-	float kp = 0.12; // TODO: tune this. still smaller?
+	float kp = 0.10; // TODO: tune this. still smaller?
 	int error = targetDegrees;
 	int drivePower = 0;
 
@@ -332,7 +332,7 @@ void rotateTo (int turnDirection, int targetDegrees, int maxPower=120, int minPo
 		if (abs(error) > 8) 	// if robot is within 0.8 degree off target and timer flag is off
 			clearTimer(T1);			// start a timer
 
-		if (time1(T1) > 150)	// if the timer is over 150ms and timer flag is true
+		if (time1(T1) > 100)	// if the timer is over 150ms and timer flag is true
 			atTarget = true;	// set boolean to complete while loop
 
 		wait1Msec(20);  //let motors update.
@@ -355,17 +355,19 @@ void runAutoSkills() {
   ///
 
 	/*Drop goal arm & mini goal arm + Drive into G1*/
+	miniArmParam = down; startTask(autoMoveMiniGoalArms);
+	wait1Msec(100);
 	armParam = down; startTask(autoMoveGoalArms);
-  miniArmParam = down; startTask(autoMoveMiniGoalArms);
-	moveStraightGyro(42, dir_forwards);
+	moveStraightGyro(42, dir_forwards, 0);
 
   /*Large goal up + Drive into G2*/
   armParam = up; startTask(autoMoveGoalArms);
-  moveStraightGyro(36, dir_forwards);
+  moveStraightGyro(36, dir_forwards, 0);
 
   /*Mini goal up + Drive into P1*/
+  miniArmParam = stopAutoCorrect; wait1Msec(40);
   miniArmParam = up; startTask(autoMoveMiniGoalArms);
-  moveStraightGyro(31.2, dir_forwards);
+  moveStraightGyro(31.2, dir_forwards, 0);
 
   /*Rotate 90 deg left*/
   rotateTo(dir_left, 90 * mod_degrees);
@@ -468,6 +470,10 @@ task autonomous	{
 		runAutoCompTop();
 	if(autonType == 2)
 		runAutoSkills();
+
+	//moveStraightGyro(72, dir_forwards);
+	//wait1Msec(1000);
+
 }
 
 float armError = 0;
@@ -492,17 +498,19 @@ task usercontrol {
 	writeDebugStreamLine("***************Start************");
 	writeDebugStreamLine("***************Start************");
 
-	/*Rotate 180 deg left*/
-  //rotateTo(dir_left, 2780/2);
+	//moveStraightGyro(48, dir_forwards);
+	//wait1Msec(4000);
 
-  /*Rotate 180 deg left*/
-  //rotateTo(dir_right, 2780/2);
-
-	moveStraightGyro(24, dir_forwards);
-	wait1Msec(1000);
-
-	//moveStraightGyro(18, dir_backwards);
+	//moveStraightGyro(72, dir_forwards);
 	//wait1Msec(1000);
+
+	/*Rotate 180 deg left*/
+  //rotateTo(dir_right, 2780/2);
+  //wait1Msec(1000);
+
+	//moveStraightGyro(72, dir_backwards);
+	//wait1Msec(1000);
+
 	//auto tests go here.
 
 	writeDebugStreamLine("Done");
