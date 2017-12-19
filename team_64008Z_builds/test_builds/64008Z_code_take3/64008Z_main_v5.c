@@ -464,15 +464,15 @@ void pre_auton() {
 }
 
 task autonomous	{
-	if(autonType == 0)
-		runAutoCompBottom();
-	if(autonType == 1)
-		runAutoCompTop();
-	if(autonType == 2)
-		runAutoSkills();
+	//if(autonType == 0)
+		//runAutoCompBottom();
+	//if(autonType == 1)
+		//runAutoCompTop();
+	//if(autonType == 2)
+		//runAutoSkills();
 
-	//moveStraightGyro(72, dir_forwards);
-	//wait1Msec(1000);
+	moveStraightGyro(72, dir_forwards);
+	wait1Msec(1000);
 
 }
 
