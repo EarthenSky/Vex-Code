@@ -582,15 +582,17 @@ task usercontrol {
 		}
 
 		/*Tank Drive*/
-		setLeftRightMoveSpeed(vexRT[Ch3], vexRT[Ch2]);
+		//setLeftRightMoveSpeed(vexRT[Ch3], vexRT[Ch2]);
 
-		/*Auto Move Arm To Drop Pos*/
-		if(goalArmPos == pos_bot) {
-			//armError = degToMove + SensorValue[encArm];  //finds distance left to go
-			//armSpeed = armError * armKp;
+		//left side.
+		motor[frontLeftDrive] = vexRT[Ch3] + vexRT[Ch4];
+  	motor[backLeftDrive] = vexRT[Ch3] + vexRT[Ch4];
+  	motor[backBackLeftDrive] = vexRT[Ch3] + vexRT[Ch4];
 
-			//motor[coneArms] = armSpeed;
-		}
+		//right side.
+		motor[frontRightDrive] = vexRT[Ch3] - vexRT[Ch4];
+		motor[backRightDrive] = vexRT[Ch3] - vexRT[Ch4];
+		motor[backBackRightDrive] = vexRT[Ch3] - vexRT[Ch4];
 
 		//writeDebugStreamLine("gyro is %d", SensorValue[gyro]);  //DEBUG: this
 
