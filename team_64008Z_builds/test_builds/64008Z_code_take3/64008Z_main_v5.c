@@ -58,7 +58,7 @@ const int pos_top = 2;
 
 const float mod_degrees = (278/360) * 10;  //multiply this with degrees to get
 const float mod_wheel_circumference = 4 * 3.14159265358979; //in inches.
-const int task_time_limit = 2000;  //3s
+const int task_time_limit = 2500;  //2.5s
 
 //const float armKp = 1.5;
 //const int degToMove = -100;
@@ -123,7 +123,7 @@ task autoMoveGoalArms() {
 
 //TODO: TEST THIS.
 //sensorPotentiometer:
-const int pot_up = 4095;
+const int pot_up = 3800;
 const int pot_down = 1675;
 const int pot_no_ground = 2150;
 
@@ -156,39 +156,6 @@ task autoMoveMiniGoalArms() {
 	motor[pushGoalHand] = 0;
 }
 
-//redo plz
-int coneArmParam = 0;
-void autoScoreCone() {
-	int ticksInPlace = 0;
-	float armError = 0;
-	float armSpeed = 0;
-
- 	while (ticksInPlace <= 3) {  //3 ticks //TODO: set to 2 ticks? (faster).
-	 	//armError = degToMove + SensorValue[encArm];  //finds distance left to go
-	 	//armSpeed = armError * armKp;
-
-	 	motor[coneArms] = armSpeed;
-
-		//TODO: tune this.
-		if(abs(armError) > 2) {  //checks for end timer. needs to be within 0.5 degrees of target.
-			ticksInPlace = 0;
-		}
-		else {
-			ticksInPlace++;
-		}
-
-		wait1Msec(20);  //60hz
- 	}
-
-	motor[claw] = 127; //open
-	wait1Msec(200);
-
-	motor[coneArms] = 100; //done
-	wait1Msec(200);
-
-	motor[coneArms] = 0; //done
-}
-
 //sets the speed of the left and right sides of the drive.  Empty is not moving.
 void setLeftRightMoveSpeed(int leftSpeed=0, int rightSpeed=0) {
   //calculate deadzone.
@@ -213,16 +180,41 @@ void resetEncoders() {
 	nMotorEncoder[backRightDrive] = 0;
 }
 
-void moveStraightGyro(float inches, const int negitaveMod=dir_forwards, float gyroInitVal=SensorValue[gyro], int maxTimeout=250, int maxPower=102, int minPower=17) {
+
+float inches;
+float currentInchValue;
+
+const int negitaveMod;
+float gyroInitVal=0;
+
+int maxTimeout=250;
+int maxPower=102;
+int minPower=17;
+
+float drivingComplete = false;
+
+//init a drive task and start it
+void startMoveTask(float inches_in, const int negitaveMod_in=dir_forwards, float gyroInitVal_in=SensorValue[gyro], int maxTimeout_in=250, int maxPower_in=102, int minPower_in=17) {
+	inches = inches_in;
+	negitaveMod = negitaveMod_in;
+	gyroInitVal = gyroInitVal_in;
+	maxTimeout = maxTimeout_in;
+	maxPower = maxPower_in;
+	minPower = minPower_in;
+
+	startTask(moveStraightGyro);
+}
+
+task moveStraightGyro() {
 	float disKp = 0.24; //distance kp.  //was 0.22
 	if(inches <= 12) { disKp = 0.3; }
 	float gyroKp = 2.9;
 
 	float error = 0;
-
 	float gyroError = 0;
 
 	int sideMod = 0;
+
   float speed = 0;
 
 	int ticks = 0;
@@ -230,12 +222,14 @@ void moveStraightGyro(float inches, const int negitaveMod=dir_forwards, float gy
 	//init encoders
 	resetEncoders();
 
+	drivingComplete = false;
+
 	bool exitLoop = false;
 	while(exitLoop == false && ticks < maxTimeout) {
 		float encAvgLR = (abs(nMotorEncoder[backBackLeftDrive]) + abs(nMotorEncoder[backLeftDrive])) / 2;
 
-		error = (abs(inches / mod_wheel_circumference * (380/2)) - encAvgLR);  //how close to completed.  // 370 is one rot
-    speed = error * disKp;  //error^1.5/1024(scaled) = speed
+		error = (abs(inches / mod_wheel_circumference * (380/2)) - encAvgLR);  //how close to completed.  // 380 is one rotation? ... /2? ...
+    speed = error * disKp;
 
     gyroError = gyroInitVal - SensorValue[gyro];
     sideMod = gyroError * gyroKp;
@@ -245,19 +239,19 @@ void moveStraightGyro(float inches, const int negitaveMod=dir_forwards, float gy
     //keep speed between min and max power.
 		speed = capMinMax(speed, minPower, maxPower);
 
-		setLeftRightMoveSpeed((speed - sideMod * (speed/127)) * negitaveMod, (speed + sideMod * (speed/127)) * negitaveMod);  //move forwards (also does straightening)
-
-		//setLeftRightMoveSpeed(speed * negitaveMod, speed * negitaveMod);
+		setLeftRightMoveSpeed((speed - sideMod * (speed/127)) * negitaveMod, (speed + sideMod * (speed/127)) * negitaveMod);  //move forwards
 
 		writeDebugStreamLine("speed is %d, error is %d, sideMod is %d", speed, error, sideMod); //DEBUG: this
 
-		// check for finish
-		if (abs(error) > 5) 	// if robot is within 8 degree wheel rotations and timer flag is off
+		// check for completion
+		if (abs(error) > 5) 	// if robot is within 5 degree wheel rotations and timer flag is off
 			//exitLoop = true;	// set boolean to complete while loop
 			clearTimer(T1);			// start a timer
 
 		if (time1(T1) >= 90)	// if the timer is over 90ms and timer flag is true (3 ticks)
 			exitLoop = true;	// set boolean to complete while loop
+
+		currentInchValue = encAvgLR / (380/2) * mod_wheel_circumference;  //convert to inches?
 
 		ticks++;
 		wait1Msec(20);  //loop speed.  //60hz
@@ -268,12 +262,76 @@ void moveStraightGyro(float inches, const int negitaveMod=dir_forwards, float gy
   //reset again, just in case.
 	resetEncoders();
 
+	currentInchValue = 0;
+	drivingComplete = true;
+	return;  //this?
+}
+
+//goes faster + has an instant stop at the end
+task moveStraightGyro2() {
+	float disKp = 0.5; //distance kp.  //was 0.24
+	if(inches <= 12) { disKp = 0.3; }
+	float gyroKp = 2.9;
+
+	float error = 0;
+	float gyroError = 0;
+
+	int sideMod = 0;
+
+  float speed = 0;
+
+	int ticks = 0;
+
+	//init encoders
+	resetEncoders();
+
+	drivingComplete = false;
+
+	bool exitLoop = false;
+	while(exitLoop == false && ticks < maxTimeout) {
+		float encAvgLR = (abs(nMotorEncoder[backBackLeftDrive]) + abs(nMotorEncoder[backLeftDrive])) / 2;
+
+		error = (abs(inches / mod_wheel_circumference * (380/2)) - encAvgLR);  //how close to completed.  // 380 is one rotation
+    speed = error * disKp;
+
+    gyroError = gyroInitVal - SensorValue[gyro];
+    sideMod = gyroError * gyroKp;
+
+    writeDebugStreamLine("speed is %d, error is %d, sideMod is %d, enc is %d, gyroerr is %d", speed, error, sideMod, nMotorEncoder[backLeftDrive], gyroError); //DEBUG: this
+
+    //keep speed between min and max power.
+		speed = capMinMax(speed, minPower, maxPower);
+
+		setLeftRightMoveSpeed((speed - sideMod * (speed/127)) * negitaveMod, (speed + sideMod * (speed/127)) * negitaveMod);  //move forwards
+
+		writeDebugStreamLine("speed is %d, error is %d, sideMod is %d", speed, error, sideMod); //DEBUG: this
+
+		if (abs(error) > 5) 	// if robot is within 5 degree wheel rotations do auto stop thing
+			setLeftRightMoveSpeed(-(speed - sideMod * (speed/127)) * negitaveMod, -(speed + sideMod * (speed/127)) * negitaveMod);  //move backwards
+			wait1Msec(200);  //loop speed.  //60hz
+			exitLoop = true;	// set boolean to complete while loop
+		}
+
+		currentInchValue = encAvgLR / (380/2) * mod_wheel_circumference;  //convert to inches?
+
+		ticks++;
+		wait1Msec(20);  //loop speed.  //60hz
+	}
+
+	setLeftRightMoveSpeed(); //turn off motors.
+
+  //reset again, just in case.
+	resetEncoders();
+
+	currentInchValue = 0;
+	drivingComplete = true;
+
 	return;  //this?
 }
 
 /*Gyro Turn*/
 //run PD loop to turn to target deg.
-void rotateTo (int turnDirection, int targetDegrees, int maxPower=120, int minPower=22, int timeOut=3000) {
+void rotateTo (int turnDirection, int targetDegrees, int maxPower=110, int minPower=22, int timeOut=2500) {
 	// initialize PD loop variables
 	float kp = 0.10; // TODO: tune this. still smaller?
 	int error = targetDegrees;
@@ -286,7 +344,7 @@ void rotateTo (int turnDirection, int targetDegrees, int maxPower=120, int minPo
 
 	// initialize gyro data variables
 	//int targetReading = SensorValue[gyro];
-	int targetReading = 0;  //no relative rotation pls thanks.
+	int targetReading = 0;  //no relative rotation pls, thanks.
 
 	// get gyroscope target reading
 	if (turnDirection >= 1)
@@ -324,15 +382,14 @@ void rotateTo (int turnDirection, int targetDegrees, int maxPower=120, int minPo
   		writeDebugStreamLine("mod = error[%d] * kp[%d] = +[%d]", errorVal, kp, leftMod);  //DEBUG: this
 		//Enc Stuff End/>
 
-
 		//send power to motors and add mods (scaled with drive power).
-		setLeftRightMoveSpeed(-(drivePower + leftMod * (drivePower/127)), (drivePower + rightMod * (drivePower/127)));
+		setLeftRightMoveSpeed(-(drivePower + (leftMod * (drivePower/127))), (drivePower + (rightMod * (drivePower/127))));
 
 		// check for finish
-		if (abs(error) > 8) 	// if robot is within 0.8 degree off target and timer flag is off
+		if (abs(error) > 10) 	// if robot is within 1 degree of target and timer flag is off
 			clearTimer(T1);			// start a timer
 
-		if (time1(T1) > 100)	// if the timer is over 150ms and timer flag is true
+		if (time1(T1) > 100)	// if the timer is over 100ms and timer flag is true
 			atTarget = true;	// set boolean to complete while loop
 
 		wait1Msec(20);  //let motors update.
@@ -349,108 +406,33 @@ void rotateTo (int turnDirection, int targetDegrees, int maxPower=120, int minPo
 
 ///the real autonomous command.
 void runAutoSkills() {
+	//screw you cone arm (‾^‾)
+	motor[coneArms] = -80;
+	wait1Msec(150);  //TODO: check this
+	motor[coneArms] = 0;
 
-  ///So far code moves robot to pick up and place two goals
-  ///this gives 30 pts?.
-  ///
+	miniArmParam = pot_down; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm DOWN
+	wait1Msec(100);  //TODO: check this
 
-	/*Drop goal arm & mini goal arm + Drive into G1*/
-	miniArmParam = down; startTask(autoMoveMiniGoalArms);
-	wait1Msec(100);
-	armParam = down; startTask(autoMoveGoalArms);
-	moveStraightGyro(42, dir_forwards, 0);
+	armParam = down; startTask(autoMoveGoalArms);  //MAIN GOAL arm DOWN
+	drivingComplete = false; startMoveTask(102.3, dir_forwards, 0);  //102.3in FWD
+	waitUntil(currentInchValue >= 40)  //wait for first GOAL picked up
 
-  /*Large goal up + Drive into G2*/
-  armParam = up; startTask(autoMoveGoalArms);
-  moveStraightGyro(36, dir_forwards, 0);
+	armParam = up; startTask(autoMoveGoalArms);  //MAIN GOAL arm UP
+	waitUntil(currentInchValue >= 70)  //wait for second GOAL picked up
 
-  /*Mini goal up + Drive into P1*/
-  miniArmParam = stopAutoCorrect; wait1Msec(40);
-  miniArmParam = up; startTask(autoMoveMiniGoalArms);
-  moveStraightGyro(31.2, dir_forwards, 0);
+	miniArmParam = pot_up; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm DOWN
+	waitUntil(drivingComplete == true)  //wait for driving position reached
 
-  /*Rotate 90 deg left*/
-  rotateTo(dir_left, 90 * mod_degrees);
+	rotateTo(dir_left, -68.6 * mod_degrees)  //rotate to correct position
 
-  /*Drive to P2*/
-  moveStraightGyro(16.56, dir_forwards);
+	drivingComplete = false; startMoveTask(18.9, dir_forwards, -68.6 * mod_degrees);  //102.3in FWD
 
-  /*Rotate 90 deg right*/
-  rotateTo(dir_right, 90 * mod_degrees);
-
-  /*Drive to 20pt goal almost*/
-  moveStraightGyro(20.76, dir_forwards);
-
-	/*move to middle*/
-	miniArmParam = mid; startTask(autoMoveMiniGoalArms);
-
-	/*Drive to 20pt goal*/
-  moveStraightGyro(9, dir_forwards);
-
-  /*Mini goal down*/
-  miniArmParam = down; startTask(autoMoveMiniGoalArms);
-
-  /*Pull back into 10pt goal*/
-  moveStraightGyro(12.36, dir_backwards);
-
-  /*Large goal down*/
-  armParam = down; startTask(autoMoveGoalArms);
-  waitUntil(armParam == completed);
-
-  /*Pull back to P2*/
-  moveStraightGyro(17.4, dir_backwards);
-
-	/**************************************/
 
   /*Ore wo dare da to omotte yagaru?!*/
 }
 
 void runAutoCompBottom() {
-
-  ///So far code gets 9/9 pts, gets one goal in 5 pts and parks.  TODO: test.
-
-	/*Raise cone arm*/
-	motor[coneArms] = -80;
-	wait1Msec(60);  //3 ticks.
-
-	/*Drop goal arm & mini goal arm + Drive into G5*/
-	armParam = down; startTask(autoMoveGoalArms);
-  //miniArmParam = down; startTask(autoMoveMiniGoalArms);
-	moveStraightGyro(54, dir_forwards);
-	/*Stop cone arm*/
-
-  /*Large goal up*/
-  armParam = mid; startTask(autoMoveGoalArms);
-  waitUntil(600);
-
-  //motor[coneArms] = 100;
-	//wait1Msec(1200);  //1s
-
-  /*Rotate 180 deg left*/
-  rotateTo(dir_left, 2780/2);
-
-	//motor[claw] = 127;
-	//wait1Msec(60);  //3 ticks.
-
-	//motor[claw] = 0;
-	//motor[coneArms] = -100;
-	/*Score cone*/
-	//autoScoreCone();
-
-  /*Drive into 5pt goal*/
-  moveStraightGyro(46, dir_forwards);
-
-  motor[coneArms] = -10;
-
-  /*Large goal down*/
-  armParam = stopAutoCorrect;
-  wait1Msec(100);
-  armParam = down; startTask(autoMoveGoalArms);
-  waitUntil(armParam == completed);
-
-  /*Pull back and park*/
-  moveStraightGyro(-45, dir_backwards);
-
   /*Ore wo dare da to omotte yagaru?!*/
 }
 
@@ -497,21 +479,6 @@ task usercontrol {
 	writeDebugStreamLine("***************Start************");
 	writeDebugStreamLine("***************Start************");
 	writeDebugStreamLine("***************Start************");
-
-	//moveStraightGyro(48, dir_forwards);
-	//wait1Msec(4000);
-
-	//moveStraightGyro(72, dir_forwards);
-	//wait1Msec(1000);
-
-	/*Rotate 180 deg left*/
-  //rotateTo(dir_right, 2780/2);
-  //wait1Msec(1000);
-
-	//moveStraightGyro(72, dir_backwards);
-	//wait1Msec(1000);
-
-	//auto tests go here.
 
 	writeDebugStreamLine("Done");
 	inTeleop = true;
@@ -593,6 +560,8 @@ task usercontrol {
 		motor[frontRightDrive] = vexRT[Ch3] - vexRT[Ch4];
 		motor[backRightDrive] = vexRT[Ch3] - vexRT[Ch4];
 		motor[backBackRightDrive] = vexRT[Ch3] - vexRT[Ch4];
+
+		//TODO: button for stack cone
 
 		//writeDebugStreamLine("gyro is %d", SensorValue[gyro]);  //DEBUG: this
 
