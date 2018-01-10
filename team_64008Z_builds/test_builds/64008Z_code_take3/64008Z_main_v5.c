@@ -415,13 +415,13 @@ void runAutoSkills() {
 	wait1Msec(100);  //TODO: check this
 
 	armParam = down; startTask(autoMoveGoalArms);  //MAIN GOAL arm DOWN
-	drivingComplete = false; startMoveTask(102.3, dir_forwards, 0);  //102.3in FWD
-	waitUntil(currentInchValue >= 40)  //wait for first GOAL picked up
+	drivingComplete = false; startMoveTask(102.3, dir_forwards, 0);  //start 102.3in FWD
+		waitUntil(currentInchValue >= 40)  //wait for first GOAL picked up
 
-	armParam = up; startTask(autoMoveGoalArms);  //MAIN GOAL arm UP
-	waitUntil(currentInchValue >= 70)  //wait for second GOAL picked up
+		armParam = up; startTask(autoMoveGoalArms);  //MAIN GOAL arm UP
+		waitUntil(currentInchValue >= 70)  //wait for second GOAL picked up
 
-	miniArmParam = pot_up; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm DOWN
+		miniArmParam = pot_up; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm DOWN
 	waitUntil(drivingComplete == true)  //wait for driving position reached
 
 	rotateTo(dir_left, -68.6 * mod_degrees)  //rotate to correct position
