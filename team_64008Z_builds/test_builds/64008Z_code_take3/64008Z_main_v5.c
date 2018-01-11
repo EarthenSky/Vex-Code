@@ -184,7 +184,7 @@ void resetEncoders() {
 float inches;
 float currentInchValue;
 
-const int negitaveMod;
+int negitaveMod=dir_forwards;
 float gyroInitVal=0;
 
 int maxTimeout=250;
@@ -192,18 +192,6 @@ int maxPower=102;
 int minPower=17;
 
 float drivingComplete = false;
-
-//init a drive task and start it
-void startMoveTask(float inches_in, const int negitaveMod_in=dir_forwards, float gyroInitVal_in=SensorValue[gyro], int maxTimeout_in=250, int maxPower_in=102, int minPower_in=17) {
-	inches = inches_in;
-	negitaveMod = negitaveMod_in;
-	gyroInitVal = gyroInitVal_in;
-	maxTimeout = maxTimeout_in;
-	maxPower = maxPower_in;
-	minPower = minPower_in;
-
-	startTask(moveStraightGyro);
-}
 
 task moveStraightGyro() {
 	float disKp = 0.24; //distance kp.  //was 0.22
@@ -306,7 +294,7 @@ task moveStraightGyro2() {
 
 		writeDebugStreamLine("speed is %d, error is %d, sideMod is %d", speed, error, sideMod); //DEBUG: this
 
-		if (abs(error) > 5) 	// if robot is within 5 degree wheel rotations do auto stop thing
+		if (abs(error) > 5) { 	// if robot is within 5 degree wheel rotations do auto stop thing
 			setLeftRightMoveSpeed(-(speed - sideMod * (speed/127)) * negitaveMod, -(speed + sideMod * (speed/127)) * negitaveMod);  //move backwards
 			wait1Msec(200);  //loop speed.  //60hz
 			exitLoop = true;	// set boolean to complete while loop
@@ -327,6 +315,18 @@ task moveStraightGyro2() {
 	drivingComplete = true;
 
 	return;  //this?
+}
+
+//init a drive task and start it
+void startMoveTask(float inches_in, const int negitaveMod_in=dir_forwards, float gyroInitVal_in=SensorValue[gyro], int maxTimeout_in=250, int maxPower_in=102, int minPower_in=17) {
+	inches = inches_in;
+	negitaveMod = negitaveMod_in;
+	gyroInitVal = gyroInitVal_in;
+	maxTimeout = maxTimeout_in;
+	maxPower = maxPower_in;
+	minPower = minPower_in;
+
+	startTask(moveStraightGyro);
 }
 
 /*Gyro Turn*/
@@ -406,7 +406,7 @@ void rotateTo (int turnDirection, int targetDegrees, int maxPower=110, int minPo
 
 ///the real autonomous command.
 void runAutoSkills() {
-	//screw you cone arm (â€¾^â€¾)
+	//screw you cone arm (â?¾^â?¾)
 	motor[coneArms] = -80;
 	wait1Msec(150);  //TODO: check this
 	motor[coneArms] = 0;
@@ -416,17 +416,44 @@ void runAutoSkills() {
 
 	armParam = down; startTask(autoMoveGoalArms);  //MAIN GOAL arm DOWN
 	drivingComplete = false; startMoveTask(102.3, dir_forwards, 0);  //start 102.3in FWD
-		waitUntil(currentInchValue >= 40)  //wait for first GOAL picked up
+		waitUntil(currentInchValue >= 40);  //wait for first GOAL picked up
 
 		armParam = up; startTask(autoMoveGoalArms);  //MAIN GOAL arm UP
-		waitUntil(currentInchValue >= 70)  //wait for second GOAL picked up
+		waitUntil(currentInchValue >= 70);  //wait for second GOAL picked up
 
-		miniArmParam = pot_up; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm DOWN
-	waitUntil(drivingComplete == true)  //wait for driving position reached
+		miniArmParam = pot_up; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm UP
+
+	waitUntil(drivingComplete == true);  //wait for driving position reached
 
 	rotateTo(dir_left, -68.6 * mod_degrees)  //rotate to correct position
 
-	drivingComplete = false; startMoveTask(18.9, dir_forwards, -68.6 * mod_degrees);  //102.3in FWD
+	drivingComplete = false; startMoveTask(18.9, dir_forwards, -68.6 * mod_degrees);  //18.9in FWD
+	waitUntil(drivingComplete == true);  //wait for driving position reached
+
+	rotateTo(dir_right, 0)  //rotate to initial forwards position
+
+	drivingComplete = false; startMoveTask(24, dir_forwards, 0);  //24in FWD
+	wait1Msec(1500)  //Wait 1500 seconds until robot is STRAIGHT with the BAR.
+
+	miniArmParam = pot_down; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm DOWN
+	wait1Msec(1000)  //Wait 1000 seconds GOAL has FALLEN.
+
+	armParam = down; startTask(autoMoveGoalArms);  //MAIN GOAL arm DOWN
+	drivingComplete = false; startMoveTask(-24, dir_backwards, 0);  //18.9in FWD
+	waitUntil(drivingComplete == true);  //wait for driving position reached
+
+	/*30 POINTS*/
+	armParam = up; startTask(autoMoveGoalArms);  //MAIN GOAL arm UP
+	miniArmParam = pot_up; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm UP
+	wait1Msec(100)
+
+	rotateTo(dir_left, -90 * mod_degrees)  //rotate to correct position
+
+	drivingComplete = false; startMoveTask(17.8, dir_forwards, -90 * mod_degrees);  //17.8in FWD
+	waitUntil(drivingComplete == true);  //wait for driving position reached
+
+	rotateTo(dir_left, -180 * mod_degrees)  //rotate to correct position
+
 
 
   /*Ore wo dare da to omotte yagaru?!*/
@@ -445,17 +472,17 @@ void pre_auton() {
 	gyroInit();
 }
 
+task stackCone () {
+
+}
+
 task autonomous	{
 	//if(autonType == 0)
 		//runAutoCompBottom();
 	//if(autonType == 1)
 		//runAutoCompTop();
-	//if(autonType == 2)
-		//runAutoSkills();
-
-	moveStraightGyro(72, dir_forwards);
-	wait1Msec(1000);
-
+	if(autonType == 2)
+		runAutoSkills();
 }
 
 float armError = 0;
@@ -499,7 +526,7 @@ task usercontrol {
 			if(is8Up == true) {
 				goalArmToStack = true;
 			}
-			is8Up = false
+			is8Up = false;
 		} else {
 			is8Up = true;
 		}
@@ -549,17 +576,7 @@ task usercontrol {
 		}
 
 		/*Tank Drive*/
-		//setLeftRightMoveSpeed(vexRT[Ch3], vexRT[Ch2]);
-
-		//left side.
-		motor[frontLeftDrive] = vexRT[Ch3] + vexRT[Ch4];
-  	motor[backLeftDrive] = vexRT[Ch3] + vexRT[Ch4];
-  	motor[backBackLeftDrive] = vexRT[Ch3] + vexRT[Ch4];
-
-		//right side.
-		motor[frontRightDrive] = vexRT[Ch3] - vexRT[Ch4];
-		motor[backRightDrive] = vexRT[Ch3] - vexRT[Ch4];
-		motor[backBackRightDrive] = vexRT[Ch3] - vexRT[Ch4];
+		setLeftRightMoveSpeed(vexRT[Ch3], vexRT[Ch2]);
 
 		//TODO: button for stack cone
 
