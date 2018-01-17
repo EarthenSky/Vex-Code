@@ -29,6 +29,16 @@ const int skills_auton = 2;
 
 /*Auto Type*/
 const int autonType = skills_auton;
+//
+//     ^
+//     |
+//     |
+//
+//     ^
+//     |
+//     |
+//
+
 
 /*Compo Init*/
 #pragma platform(VEX);
@@ -37,7 +47,7 @@ const int autonType = skills_auton;
 #pragma autonomousDuration(9000);
 #pragma userControlDuration(9000);
 
-#include "Vex_Competition_Includes.c" //backcode no modify pls.
+#include "Vex_Competition_Includes.c" //backcode, no modify pls.
 
 /*Global Constants*/
 //#include "64008Z_auto_v2.c" //autonomous code.
@@ -180,14 +190,13 @@ void resetEncoders() {
 	nMotorEncoder[backRightDrive] = 0;
 }
 
-
 float inches;
 float currentInchValue;
 
 int negitaveMod=dir_forwards;
 float gyroInitVal=0;
 
-int maxTimeout=250;
+int maxTimeout=275;
 int maxPower=102;
 int minPower=17;
 
@@ -255,7 +264,7 @@ task moveStraightGyro() {
 	return;  //this?
 }
 
-//goes faster + has an instant stop at the end
+//goes faster + has an instant stop at the end  //not tested
 task moveStraightGyro2() {
 	float disKp = 0.5; //distance kp.  //was 0.24
 	if(inches <= 12) { disKp = 0.3; }
@@ -318,7 +327,7 @@ task moveStraightGyro2() {
 }
 
 //init a drive task and start it
-void startMoveTask(float inches_in, const int negitaveMod_in=dir_forwards, float gyroInitVal_in=SensorValue[gyro], int maxTimeout_in=250, int maxPower_in=102, int minPower_in=17) {
+void startMoveTask(float inches_in, const int negitaveMod_in=dir_forwards, float gyroInitVal_in=SensorValue[gyro], int maxTimeout_in=275, int maxPower_in=102, int minPower_in=17) {
 	inches = inches_in;
 	negitaveMod = negitaveMod_in;
 	gyroInitVal = gyroInitVal_in;
@@ -407,7 +416,7 @@ void rotateTo (int turnDirection, int targetDegrees, int maxPower=110, int minPo
 ///the real autonomous command.
 void runAutoSkills() {
 	//screw you cone arm (â?¾^â?¾)
-	motor[coneArms] = -80;
+	motor[coneArms] = -80;  //check negitave or pos
 	wait1Msec(150);  //TODO: check this
 	motor[coneArms] = 0;
 
@@ -436,7 +445,7 @@ void runAutoSkills() {
 	wait1Msec(1500)  //Wait 1500 seconds until robot is STRAIGHT with the BAR.
 
 	miniArmParam = pot_down; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm DOWN
-	wait1Msec(1000)  //Wait 1000 seconds GOAL has FALLEN.
+	wait1Msec(1000)  //Wait 1000 seconds until GOAL has FALLEN.
 
 	armParam = down; startTask(autoMoveGoalArms);  //MAIN GOAL arm DOWN
 	drivingComplete = false; startMoveTask(-24, dir_backwards, 0);  //18.9in FWD
@@ -454,17 +463,86 @@ void runAutoSkills() {
 
 	rotateTo(dir_left, -180 * mod_degrees)  //rotate to correct position
 
+	miniArmParam = pot_down; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm DOWN
+	wait1Msec(100);  //TODO: check this
 
+	armParam = down; startTask(autoMoveGoalArms);  //MAIN GOAL arm DOWN
+	drivingComplete = false; startMoveTask(0, dir_forwards, -180 * mod_degrees);  //move 0in FWD
+		waitUntil(currentInchValue >= 0);  //wait for first GOAL picked up 40-x
+
+		armParam = up; startTask(autoMoveGoalArms);  //MAIN GOAL arm UP
+		waitUntil(currentInchValue >= 0);  //wait for second GOAL picked up 70-x
+
+		miniArmParam = pot_up; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm UP
+
+	waitUntil(drivingComplete == true);  //wait for driving position reached
+
+	rotateTo(dir_left, (-68.6 + -180) * mod_degrees)  //rostate to correct position
+	drivingComplete = false; startMoveTask(18.9, dir_forwards, (-68.6 + -180) * mod_degrees);  //18.9in FWD
+	waitUntil(drivingComplete == true);  //wait for driving position reached
+
+	rotateTo(dir_right, -180 * mod_degrees)  //rotate to initial forwards position
+
+	drivingComplete = false; startMoveTask(24, dir_forwards, -180 * mod_degrees);  //24in FWD
+	wait1Msec(1500)  //Wait 1500 seconds until robot is STRAIGHT with the BAR.
+
+	miniArmParam = pot_down; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm DOWN
+	wait1Msec(1000)  //Wait 1000 seconds until GOAL has FALLEN.
+
+	armParam = down; startTask(autoMoveGoalArms);  //MAIN GOAL arm DOWN
+	drivingComplete = false; startMoveTask(-24, dir_backwards, -180 * mod_degrees);  //18.9in FWD
+	waitUntil(drivingComplete == true);  //wait for driving position reached
+
+	/*60 POINTS*/
+	//dun ^^
 
   /*Ore wo dare da to omotte yagaru?!*/
 }
 
 void runAutoCompBottom() {
+	//screw you cone arm (â?¾^â?¾)
+	motor[coneArms] = -80;  //check negitave or pos
+	wait1Msec(150);  //TODO: check this
+	motor[coneArms] = 0;
+
+	armParam = down; startTask(autoMoveGoalArms);  //MAIN GOAL arm DOWN
+	wait1Msec(100);  //TODO: check this
+
+	drivingComplete = false; startMoveTask(57.8, dir_forwards, 0);  //move 57.8in FWD
+	waitUntil(drivingComplete == true);  //wait for driving position reached
+
+	armParam = down; startTask(autoMoveGoalArms);  //MAIN GOAL arm UP
+	wait1Msec(100);  //TODO: check this
+
+	rotateTo(dir_left, -180 * mod_degrees)  //rotate to correct position
+
+	drivingComplete = false; startMoveTask(57.8, dir_forwards, -180 * mod_degrees);  //move 57.8in FWD
+	waitUntil(drivingComplete == true);  //wait for driving position reached
+
+	drivingComplete = false; startMoveTask(-66.3, dir_backwards, -180 * mod_degrees);  //move 66.3in BACK
+	waitUntil(drivingComplete == true);  //wait for driving position reached
+
+	armParam = down; startTask(autoMoveGoalArms);  //MAIN GOAL arm DOWN
+	wait1Msec(100);  //TODO: check this
+
+	/*Moves away from goal (doesnt need to be precise)*/
+	setLeftRightMoveSpeed(-120, -120);
+	wait1Msec(2500);
+	setLeftRightMoveSpeed(0, 0);
+	wait1Msec(500);
+
+	setLeftRightMoveSpeed(-70, -70);
+	wait1Msec(1000);
+	setLeftRightMoveSpeed(0, 0);
+	wait1Msec(500);
+
   /*Ore wo dare da to omotte yagaru?!*/
 }
 
 //has a rotation different.
 void runAutoCompTop() {
+	runAutoCompBottom();	//there is just one.
+
   /*Ore wo dare da to omotte yagaru?!*/
 }
 
@@ -472,16 +550,12 @@ void pre_auton() {
 	gyroInit();
 }
 
-task stackCone () {
-
-}
-
 task autonomous	{
-	//if(autonType == 0)
-		//runAutoCompBottom();
-	//if(autonType == 1)
-		//runAutoCompTop();
-	if(autonType == 2)
+	if(autonType == 0)
+		runAutoCompBottom();
+	else if(autonType == 1)
+		runAutoCompTop();
+	else if(autonType == 2)
 		runAutoSkills();
 }
 
@@ -510,11 +584,11 @@ task usercontrol {
 	writeDebugStreamLine("Done");
 	inTeleop = true;
 	while(true) {
-		/*Large Goal Arm*/
-		if(vexRT[Btn8R] == 1 && SensorValue[handsDown] == 0)	{
+		/*Large Goal Arm*/  //check polarity
+		if(vexRT[Btn8D] == 1 && SensorValue[handsDown] == 0)	{
 			motor[goalHands] = -127;
 			goalArmToStack = false;
-		} else if(vexRT[Btn8D] == 1 && SensorValue[handsUp] == 0) {
+		} else if(vexRT[Btn8R] == 1 && SensorValue[handsUp] == 0) {
 			motor[goalHands] = 80;
 			goalArmToStack = false;
 		} else {
@@ -536,7 +610,7 @@ task usercontrol {
 			motor[goalHands] = capMinMax(0.2 * (1100 - SensorValue[largeGoalPot]) + 5, 2, 80);
 		}
 
-		/*Cone Arm*/
+		/*Cone Arm*/  //TODO: check polarity.
 		if(vexRT[Btn5U] == 1)	{
 			motor[coneArms] = 90;
 		} else if (vexRT[Btn5D] == 1) {
@@ -548,10 +622,10 @@ task usercontrol {
 		/*Claws (negitave is closed)*/
 		if(vexRT[Btn6U] == 1)	{
 			isHoldingClaw = false;
-			motor[claw] = 127;
+			motor[claw] = -110;
 		} else if (vexRT[Btn6D] == 1) {
 			isHoldingClaw = true;
-			motor[claw] = -110;
+			motor[claw] = 127;
 		} else {
 			clawClosed = false;
 			//keeps pressure on the cone when picked up.
@@ -562,16 +636,17 @@ task usercontrol {
 			}
 		}
 
-		/*Mini Goal*/
-		if(vexRT[Btn7L] == 1)	{
+		/*Mini Goal*/  //check polarity
+		if(vexRT[Btn7L] == 1)	{  //up
 			motor[pushGoalHand] = 127;
 			miniGoalHoldVal = SensorValue[miniGoalPot];
-		} else if(vexRT[Btn7D] == 1) {
+		} else if(vexRT[Btn7D] == 1) {  //down
 			motor[pushGoalHand] = -127;
 			miniGoalHoldVal = SensorValue[miniGoalPot];
-		} else if(vexRT[Btn7U] == 1) {
+		} else if(vexRT[Btn7U] == 1) {  //pickup goal pos
 			miniGoalHoldVal = 1675;
-		} else {
+			motor[pushGoalHand] = (miniGoalHoldVal - SensorValue[miniGoalPot]) * -0.2;
+		} else {  //stay at pos
 			motor[pushGoalHand] = (miniGoalHoldVal - SensorValue[miniGoalPot]) * -0.2;
 		}
 
@@ -583,6 +658,6 @@ task usercontrol {
 		//writeDebugStreamLine("gyro is %d", SensorValue[gyro]);  //DEBUG: this
 
 		//let everything update
-		wait1Msec(20);  //TODO: remove?
+		wait1Msec(16);  //TODO: remove?
 	}
 }
