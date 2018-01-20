@@ -351,8 +351,8 @@ void rotateTo (int turnDirection, int targetDegrees, int maxPower=110, int minPo
 ///the real autonomous command.
 void runAutoSkills() {
 	//screw you cone arm (â?¾^â?¾)
-	motor[coneR] = -80;  //check negitave or pos
-	motor[coneL] = -80;
+	motor[coneR] = 80;  //check negitave or pos
+	motor[coneL] = 80;
 	wait1Msec(150);  //TODO: check this
 	motor[coneR] = 0;
 	motor[coneL] = 0;
@@ -439,8 +439,8 @@ void runAutoSkills() {
 //TODO: test this
 void runAutoCompBottom() {
 	//screw you cone arm (â?¾^â?¾)
-	motor[coneL] = -80;  //check negitave or pos
-	motor[coneR] = -80;
+	motor[coneL] = 80;  //check negitave or pos
+	motor[coneR] = 80;
 	wait1Msec(150);  //TODO: check this
 	motor[coneL] = 0;
 	motor[coneR] = 0;
@@ -551,7 +551,7 @@ task usercontrol {
 			motor[goalHands] = capMinMax(0.2 * (1100 - SensorValue[largeGoalPot]) + 5, 2, 80);
 		}
 
-		/*Cone Arm*/  //TODO: check polarity.
+		/*Cone Arm*/
 		if(vexRT[Btn5U] == 1)	{
 			motor[coneL] = 90;
 			motor[coneR] = 90;
