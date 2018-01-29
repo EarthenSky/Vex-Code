@@ -126,16 +126,11 @@ task autonomous2	{
 
 //Rotation may or may not work.
 task autonomous	{
-	/*Init 1*/
-	SensorType[gyro] = sensorNone;
 
 	/*Drop Goal*/
 	motor[handMotors] = -127;
 	wait1Msec(1250);
 	motor[handMotors] = 0;
-
-	/*Init 2*/
-	gyroInitialize();
 
 	/*Move Forwards*/
 	setMoveSpeed(70);
