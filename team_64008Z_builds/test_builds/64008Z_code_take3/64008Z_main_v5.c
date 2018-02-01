@@ -113,7 +113,7 @@ int armParam = 0;
 task autoMoveGoalArms() {
 	clearTimer(T4);
 
-	if(armParam == up) {
+	if(armParam == down) {
 			motor[goalHand] = 120;
 			motor[goalHand2] = -120;
     waitUntil(SensorValue[handsDown] == 1 || time1(T4) >= task_time_limit);
@@ -122,10 +122,10 @@ task autoMoveGoalArms() {
 			motor[goalHand] = capMinMax(0.2 * (1100 - SensorValue[largeGoalPot]) + 5, 2, 80);
 			wait1Msec(20);
 		}
-	} else if(armParam == down) {
+	} else if(armParam == up) {
 			motor[goalHand] = -120;
 			motor[goalHand2] = 120;
-    waitUntil(SensorValue[handsDown] == 1 || time1(T4) >= task_time_limit);
+    waitUntil(SensorValue[handsUp] == 1 || time1(T4) >= task_time_limit);
 	}
 
   armParam = completed;
@@ -134,9 +134,9 @@ task autoMoveGoalArms() {
 }
 
 //sensorPotentiometer:
-const int pot_up = 3600;
-const int pot_down = 1850;
-const int pot_no_ground = 2250;
+const int pot_up = 2800;
+const int pot_down = 2050;
+const int pot_no_ground = 2400;
 
 //not super accurate (doesn't need to be.)
 int miniArmParam = 0;
@@ -359,17 +359,18 @@ void runAutoSkills() {
 	motor[coneR] = 0;
 	motor[coneL] = 0;
 
-	miniArmParam = pot_down; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm DOWN
+	miniArmParam = down; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm DOWN
 	wait1Msec(100);  //TODO: check this
 
 	armParam = down; startTask(autoMoveGoalArms);  //MAIN GOAL arm DOWN
+	wait1Msec(600);  //TODO: check this
 	drivingComplete = false; startMoveTask(102.3, dir_forwards, 0);  //start 102.3in FWD
 		waitUntil(currentInchValue >= 40);  //wait for first GOAL picked up
 
 		armParam = up; startTask(autoMoveGoalArms);  //MAIN GOAL arm UP
-		waitUntil(currentInchValue >= 70);  //wait for second GOAL picked up
+		waitUntil(currentInchValue >= 100);  //wait for second GOAL picked up
 
-		miniArmParam = pot_up; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm UP
+		miniArmParam = up; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm UP
 
 	waitUntil(drivingComplete == true);  //wait for driving position reached
 
@@ -383,7 +384,7 @@ void runAutoSkills() {
 	drivingComplete = false; startMoveTask(24, dir_forwards, 0);  //24in FWD
 	wait1Msec(1500);  //Wait 1500 seconds until robot is STRAIGHT with the BAR.
 
-	miniArmParam = pot_down; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm DOWN
+	miniArmParam = down; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm DOWN
 	wait1Msec(1000);  //Wait 1000 seconds until GOAL has FALLEN.
 
 	armParam = down; startTask(autoMoveGoalArms);  //MAIN GOAL arm DOWN
@@ -392,9 +393,8 @@ void runAutoSkills() {
 
 	/*30 POINTS*/
 	armParam = up; startTask(autoMoveGoalArms);  //MAIN GOAL arm UP
-	miniArmParam = pot_up; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm UP
+	miniArmParam = up; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm UP
 	wait1Msec(100);
-
 
 	rotateTo(dir_left, -90 * mod_degrees);  //rotate to correct position
 
@@ -403,7 +403,7 @@ void runAutoSkills() {
 
 	rotateTo(dir_left, -180 * mod_degrees);  //rotate to correct position
 
-	miniArmParam = pot_down; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm DOWN
+	miniArmParam = down; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm DOWN
 	wait1Msec(100);  //TODO: check this
 
 	armParam = down; startTask(autoMoveGoalArms);  //MAIN GOAL arm DOWN
@@ -413,7 +413,7 @@ void runAutoSkills() {
 		armParam = up; startTask(autoMoveGoalArms);  //MAIN GOAL arm UP
 		waitUntil(currentInchValue >= 0);  //wait for second GOAL picked up 70-x
 
-		miniArmParam = pot_up; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm UP
+		miniArmParam = up; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm UP
 
 	waitUntil(drivingComplete == true);  //wait for driving position reached
 
@@ -426,7 +426,7 @@ void runAutoSkills() {
 	drivingComplete = false; startMoveTask(24, dir_forwards, -180 * mod_degrees);  //24in FWD
 	wait1Msec(1500);  //Wait 1500 seconds until robot is STRAIGHT with the BAR.
 
-	miniArmParam = pot_down; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm DOWN
+	miniArmParam = down; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm DOWN
 	wait1Msec(1000);  //Wait 1000 seconds until GOAL has FALLEN.
 
 	armParam = down; startTask(autoMoveGoalArms);  //MAIN GOAL arm DOWN
@@ -621,6 +621,8 @@ task usercontrol {
 	writeDebugStreamLine("***************Start************");
 	writeDebugStreamLine("***************Start************");
 
+	//miniArmParam = down; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm DOWN
+	wait1Msec(5000);
 	//at();
 
 	writeDebugStreamLine("Done");
@@ -694,7 +696,7 @@ task usercontrol {
 			motor[goalHand2Motor] = 127;
 			miniGoalHoldVal = SensorValue[miniGoalPot];
 		} else if(vexRT[Btn7U] == 1) {  //pickup goal pos
-			miniGoalHoldVal = 1850;
+			miniGoalHoldVal = 2050;
 			motor[goalHand2Motor] = (miniGoalHoldVal - SensorValue[miniGoalPot]) * -0.2;
 		} else {  //stay at pos
 			motor[goalHand2Motor] = (miniGoalHoldVal - SensorValue[miniGoalPot]) * -0.2;
