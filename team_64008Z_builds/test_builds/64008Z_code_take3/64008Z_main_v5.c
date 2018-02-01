@@ -75,6 +75,7 @@ const int task_time_limit = 2500;  //2.5s
 
 bool inTeleop = false;
 
+//can be negitave too
 int capMinMax (int val, int min, int max) {
 	if(val < min && val > 0) {
 		val = min;
@@ -134,7 +135,7 @@ task autoMoveGoalArms() {
 }
 
 //sensorPotentiometer:
-const int pot_up = 2800;
+const int pot_up = 3000;
 const int pot_down = 2050;
 const int pot_no_ground = 2400;
 
@@ -280,7 +281,7 @@ void startMoveTask(float inches_in, const int negitaveMod_in=dir_forwards, float
 void rotateTo (int turnDirection, int targetDegrees, int maxPower=110, int minPower=22, int timeOut=2500) {
 	// initialize PD loop variables
 	float kp = 0.10; // TODO: tune this. still smaller?
-	int error = targetDegrees;
+	int error = abs(targetDegrees);
 	int drivePower = 0;
 
 	clearTimer(T2);
@@ -294,12 +295,12 @@ void rotateTo (int turnDirection, int targetDegrees, int maxPower=110, int minPo
 
 	// get gyroscope target reading
 	if (turnDirection >= 1)
-		targetReading += targetDegrees;
+		targetReading += abs(targetDegrees);
 	else if (turnDirection <= 0)
-		targetReading -= targetDegrees;
+		targetReading -= abs(targetDegrees);
 
 	// change kp if target is under 20 degree threshold
-	if (targetDegrees < 200) { kp = 0.2; }  //ok?
+	//if (targetDegrees < 200) { kp = 0.2; }  //ok?
 
 	// run motors until target is within 1 degree certainty
 	while (!atTarget && (time1[T2] < timeOut)) {
@@ -311,8 +312,8 @@ void rotateTo (int turnDirection, int targetDegrees, int maxPower=110, int minPo
 		//keep speed between min and max power.
 		drivePower = capMinMax(drivePower, minPower, maxPower);
 
-		//<Enc Stragihtening Start
-			float kp = 2.5;  //Tune?
+		//<Enc Straightening Start
+			float kp = 2.4;  //Tune?
 
 			float errorVal = 0;
 
@@ -323,13 +324,13 @@ void rotateTo (int turnDirection, int targetDegrees, int maxPower=110, int minPo
 
   		//update both modifiers.
   		rightMod = (errorVal * kp);
-  		leftMod = -rightMod;
+  		leftMod = rightMod;
 
   		writeDebugStreamLine("mod = error[%d] * kp[%d] = +[%d]", errorVal, kp, leftMod);  //DEBUG: this
-		//Enc Stragihtening End/>
+		//Enc Straightening End/>
 
 		//send power to motors and add mods (scaled with drive power).
-		setLeftRightMoveSpeed(-(drivePower + (leftMod * (drivePower/127))), (drivePower + (rightMod * (drivePower/127))));
+		setLeftRightMoveSpeed((drivePower + (leftMod * (drivePower/127))), -(drivePower + (rightMod * (drivePower/127))));
 
 		// check for finish
 		if (abs(error) > 10) 	// if robot is within 1 degree of target and timer flag is off
