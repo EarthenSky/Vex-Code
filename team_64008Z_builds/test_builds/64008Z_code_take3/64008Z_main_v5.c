@@ -59,8 +59,8 @@ const int stopAutoCorrect = 5;
 
 const int dir_forwards = 1;
 const int dir_backwards = -1;
-const int dir_left = -1;
-const int dir_right = 1;
+const int dir_left = 1;
+const int dir_right = -1;
 
 const int pos_bot = 0;
 const int pos_mid = 1;
@@ -323,14 +323,14 @@ void rotateTo (int turnDirection, int targetDegrees, int maxPower=110, int minPo
   		errorVal = (abs(nMotorEncoder[backBackLeftDrive]) - abs(nMotorEncoder[backRightDrive]));
 
   		//update both modifiers.
-  		rightMod = (errorVal * kp);
+  		rightMod = -(errorVal * kp);
   		leftMod = rightMod;
 
   		writeDebugStreamLine("mod = error[%d] * kp[%d] = +[%d]", errorVal, kp, leftMod);  //DEBUG: this
 		//Enc Straightening End/>
 
 		//send power to motors and add mods (scaled with drive power).
-		setLeftRightMoveSpeed((drivePower + (leftMod * (drivePower/127))), -(drivePower + (rightMod * (drivePower/127))));
+		setLeftRightMoveSpeed(-(drivePower + (leftMod * (drivePower/127))), (drivePower + (rightMod * (drivePower/127))));
 
 		// check for finish
 		if (abs(error) > 10) 	// if robot is within 1 degree of target and timer flag is off
@@ -365,11 +365,11 @@ void runAutoSkills() {
 
 	armParam = down; startTask(autoMoveGoalArms);  //MAIN GOAL arm DOWN
 	wait1Msec(600);  //TODO: check this
-	drivingComplete = false; startMoveTask(102.3, dir_forwards, 0);  //start 102.3in FWD
-		waitUntil(currentInchValue >= 40);  //wait for first GOAL picked up
+	drivingComplete = false; startMoveTask(97, dir_forwards, 0);  //start 102.3in FWD
+		waitUntil(currentInchValue >= 50);  //wait for first GOAL picked up
 
 		armParam = up; startTask(autoMoveGoalArms);  //MAIN GOAL arm UP
-		waitUntil(currentInchValue >= 100);  //wait for second GOAL picked up
+		waitUntil(currentInchValue >= 130);  //wait for first GOAL picked up
 
 		miniArmParam = up; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm UP
 
@@ -377,19 +377,19 @@ void runAutoSkills() {
 
 	rotateTo(dir_left, -68.6 * mod_degrees);  //rotate to correct position
 
-	drivingComplete = false; startMoveTask(18.9, dir_forwards, -68.6 * mod_degrees);  //18.9in FWD
+	drivingComplete = false; startMoveTask(20, dir_forwards, SensorValue[gyro]);  //18.9in FWD
 	waitUntil(drivingComplete == true);  //wait for driving position reached
 
-	rotateTo(dir_right, 0);  //rotate to initial forwards position
+	rotateTo(dir_right, 50);  //rotate to initial forwards position
 
-	drivingComplete = false; startMoveTask(24, dir_forwards, 0);  //24in FWD
+	drivingComplete = false; startMoveTask(30, dir_forwards, SensorValue[gyro]);  //24in FWD
 	wait1Msec(1500);  //Wait 1500 seconds until robot is STRAIGHT with the BAR.
 
 	miniArmParam = down; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm DOWN
 	wait1Msec(1000);  //Wait 1000 seconds until GOAL has FALLEN.
 
 	armParam = down; startTask(autoMoveGoalArms);  //MAIN GOAL arm DOWN
-	drivingComplete = false; startMoveTask(-24, dir_backwards, 0);  //18.9in FWD
+	drivingComplete = false; startMoveTask(-30, dir_backwards, SensorValue[gyro]);  //18.9in FWD
 	waitUntil(drivingComplete == true);  //wait for driving position reached
 
 	/*30 POINTS*/
@@ -623,8 +623,11 @@ task usercontrol {
 	writeDebugStreamLine("***************Start************");
 
 	//miniArmParam = down; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm DOWN
-	wait1Msec(5000);
+	//wait1Msec(5000);
 	//at();
+	runAutoSkills();
+
+	//rotateTo(dir_left, -68.6 * mod_degrees);  //rotate to correct position
 
 	writeDebugStreamLine("Done");
 	inTeleop = true;
