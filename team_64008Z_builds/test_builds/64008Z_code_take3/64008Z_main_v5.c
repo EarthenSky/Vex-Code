@@ -375,7 +375,7 @@ void runAutoSkills() {
 
 	waitUntil(drivingComplete == true);  //wait for driving position reached
 
-	rotateTo(dir_left, -68.6 * mod_degrees);  //rotate to correct position
+	rotateTo(dir_left, -686);  //rotate to correct position
 
 	drivingComplete = false; startMoveTask(20, dir_forwards, SensorValue[gyro]);  //18.9in FWD
 	waitUntil(drivingComplete == true);  //wait for driving position reached
@@ -397,18 +397,18 @@ void runAutoSkills() {
 	miniArmParam = up; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm UP
 	wait1Msec(100);
 
-	rotateTo(dir_left, -90 * mod_degrees);  //rotate to correct position
+	rotateTo(dir_left, -900);  //rotate to correct position
 
-	drivingComplete = false; startMoveTask(17.8, dir_forwards, -90 * mod_degrees);  //17.8in FWD
+	drivingComplete = false; startMoveTask(17.8, dir_forwards, SensorValue[gyro]);  //17.8in FWD
 	waitUntil(drivingComplete == true);  //wait for driving position reached
 
-	rotateTo(dir_left, -180 * mod_degrees);  //rotate to correct position
+	rotateTo(dir_left, -1800);  //rotate to correct position
 
 	miniArmParam = down; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm DOWN
 	wait1Msec(100);  //TODO: check this
 
 	armParam = down; startTask(autoMoveGoalArms);  //MAIN GOAL arm DOWN
-	drivingComplete = false; startMoveTask(0, dir_forwards, -180 * mod_degrees);  //move 0in FWD
+	drivingComplete = false; startMoveTask(0, dir_forwards, SensorValue[gyro]);  //move 0in FWD
 		waitUntil(currentInchValue >= 0);  //wait for first GOAL picked up 40-x
 
 		armParam = up; startTask(autoMoveGoalArms);  //MAIN GOAL arm UP
@@ -418,20 +418,20 @@ void runAutoSkills() {
 
 	waitUntil(drivingComplete == true);  //wait for driving position reached
 
-	rotateTo(dir_left, (-68.6 + -180) * mod_degrees);  //rostate to correct position
-	drivingComplete = false; startMoveTask(18.9, dir_forwards, (-68.6 + -180) * mod_degrees);  //18.9in FWD
+	rotateTo(dir_left, (-68.6 + -180) * 10);  //rostate to correct position
+	drivingComplete = false; startMoveTask(18.9, dir_forwards, SensorValue[gyro]);  //18.9in FWD
 	waitUntil(drivingComplete == true);  //wait for driving position reached
 
-	rotateTo(dir_right, -180 * mod_degrees);  //rotate to initial forwards position
+	rotateTo(dir_right, -1800);  //rotate to initial forwards position
 
-	drivingComplete = false; startMoveTask(24, dir_forwards, -180 * mod_degrees);  //24in FWD
+	drivingComplete = false; startMoveTask(24, dir_forwards, SensorValue[gyro]);  //24in FWD
 	wait1Msec(1500);  //Wait 1500 seconds until robot is STRAIGHT with the BAR.
 
 	miniArmParam = down; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm DOWN
 	wait1Msec(1000);  //Wait 1000 seconds until GOAL has FALLEN.
 
 	armParam = down; startTask(autoMoveGoalArms);  //MAIN GOAL arm DOWN
-	drivingComplete = false; startMoveTask(-24, dir_backwards, -180 * mod_degrees);  //18.9in Back
+	drivingComplete = false; startMoveTask(-24, dir_backwards, SensorValue[gyro]);  //18.9in Back
 	waitUntil(drivingComplete == true);  //wait for driving position reached
 
 	/*60 POINTS*/
@@ -586,7 +586,7 @@ task autonomous	{
 	//else if(autonType == 1)
 		//runAutoCompTop();
 	//else if(autonType == 2)
-	runAutoSkills();
+	//runAutoSkills();
 
 
 	//rotateTo(dir_right, 900);  //rotate to initial forwards position
@@ -595,8 +595,8 @@ task autonomous	{
 	//waitUntil(drivingComplete == true);  //wait for driving position reached
 
 
-	writeDebugStreamLine("Done Movement");
-	//auto();
+	//writeDebugStreamLine("Done Movement");
+	auto();
 
 }
 
@@ -625,7 +625,7 @@ task usercontrol {
 	//miniArmParam = down; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm DOWN
 	//wait1Msec(5000);
 	//at();
-	runAutoSkills();
+	//runAutoSkills();
 
 	//rotateTo(dir_left, -68.6 * mod_degrees);  //rotate to correct position
 
@@ -678,25 +678,25 @@ task usercontrol {
 		/*Claws (negitave is closed)*/
 		if(vexRT[Btn6U] == 1)	{
 			isHoldingClaw = false;
-			motor[claw] = 127;
+			//motor[claw] = 127;
 		} else if (vexRT[Btn6D] == 1) {
 			isHoldingClaw = true;
-			motor[claw] = -110;
+			//motor[claw] = -110;
 		} else {
 			clawClosed = false;
 			//keeps pressure on the cone when picked up.
 			if(isHoldingClaw == true) {
-				motor[claw] = 0;  //TODO: change value down or up if pressure is wrong.
+				//motor[claw] = 0;  //TODO: change value down or up if pressure is wrong.
 			} else {
-				motor[claw] = 30;
+				//motor[claw] = 30;
 			}
 		}
 
 		/*Mini Goal*/  //check polarity
-		if(vexRT[Btn7L] == 1)	{  //up
+		if(vexRT[Btn6U] == 1)	{  //up
 			motor[goalHand2Motor] = -127;
 			miniGoalHoldVal = SensorValue[miniGoalPot];
-		} else if(vexRT[Btn7D] == 1) {  //down
+		} else if(vexRT[Btn6D] == 1) {  //down
 			motor[goalHand2Motor] = 127;
 			miniGoalHoldVal = SensorValue[miniGoalPot];
 		} else if(vexRT[Btn7U] == 1) {  //pickup goal pos
