@@ -499,7 +499,7 @@ void setRotSpeed(int speed) {
 	setLeftRightMoveSpeed(speed, -speed);
 }
 
-void auto() {
+void auto(int dir) {
   motor[coneL] = 80;  //check negitave or pos
 	motor[coneR] = 80;
 	wait1Msec(1000);  //TODO: check this
@@ -531,10 +531,10 @@ void auto() {
 	setLeftRightMoveSpeed(0, 0);
 
 	/*Rotate 180 Degrees*/
-	setRotSpeed(80);
+	setRotSpeed(80 * dir);
 	bool exit = false;
 	while(exit == false) {
-		if(abs(SensorValue[gyro]) >= 180 * 8 * 1.38) { setRotSpeed(0); exit = true; }  //180 degrees.
+		if(abs(SensorValue[gyro]) >= dir * 180 * 8 * 1.38) { setRotSpeed(0); exit = true; }  //180 degrees.
 	}
 
 	/*Move To place goal*/
@@ -582,7 +582,7 @@ void auto() {
 }
 
 //20 maybe?
-void auto2() {
+void auto2(int dir) {
   motor[coneL] = 80;  //check negitave or pos
 	motor[coneR] = 80;
 	wait1Msec(1000);  //TODO: check this
@@ -614,10 +614,10 @@ void auto2() {
 	setLeftRightMoveSpeed(0, 0);
 
 	/*Rotate */
-	setRotSpeed(100);
+	setRotSpeed(100 * dir);
 	bool exit = false;
 	while(exit == false) {
-		if(abs(SensorValue[gyro]) >= 180 * 8 * 0.85) { setRotSpeed(0); exit = true; }  //180 degrees.
+		if(abs(SensorValue[gyro]) >= dir * 180 * 8 * 0.85) { setRotSpeed(0); exit = true; }  //180 degrees.
 	}
 
 	/*Move To place goal*/
@@ -626,10 +626,10 @@ void auto2() {
 	setLeftRightMoveSpeed(0, 0);
 
 	/*Rotate */
-	setRotSpeed(100);
+	setRotSpeed(100 * dir);
 	bool exit = false;
 	while(exit == false) {
-		if(abs(SensorValue[gyro]) >= 180 * 8 * 1.4) { setRotSpeed(0); exit = true; }  //180 degrees.
+		if(abs(SensorValue[gyro]) >= dir * 180 * 8 * 1.4) { setRotSpeed(0); exit = true; }  //180 degrees.
 	}
 
 	/*Move To place goal*/
@@ -686,17 +686,13 @@ task autonomous	{
 
 
 
-	//rotateTo(dir_right, 900);  //rotate to initial forwards position
-
-	//drivingComplete = false; startMoveTask(24, dir_backwards, 0);  //move 57.8in FWD
-	//waitUntil(drivingComplete == true);  //wait for driving position reached
-
-
 	//runAutoSkills();
-	auto();
-	//auto2
-	//writeDebugStreamLine("Done Movement");
 
+	/* 1 is left -1 is right */
+	auto(1);
+	//auto2(1)
+
+	//writeDebugStreamLine("Done Movement");
 }
 
 float armError = 0;
@@ -734,8 +730,8 @@ task usercontrol {
 		/*Large Goal Arm*/
 
 		if(vexRT[Btn8D] == 1 && SensorValue[handsDown] == 0)	{
-			motor[goalHand] = 100;
-			motor[goalHand2] = -100;
+			motor[goalHand] = 110;
+			motor[goalHand2] = -110;
 			goalArmToStack = false;
 		} else if(vexRT[Btn8R] == 1 && SensorValue[handsUp] == 0) {
 			motor[goalHand] = -127;
@@ -808,19 +804,21 @@ task usercontrol {
 		/*Tank Drive*/
 		//setLeftRightMoveSpeed(vexRT[Ch3], vexRT[Ch2]);
 
+
 		//left side.
-		motor[leftDrive] = vexRT[Ch3] + vexRT[Ch4] - 5;
-  	motor[backBackLeftDrive] = vexRT[Ch3] + vexRT[Ch4] - 5;
+		//motor[leftDrive] = vexRT[Ch3] + vexRT[Ch4] - 4;
+  	//motor[backBackLeftDrive] = vexRT[Ch3] + vexRT[Ch4] - 4;
 
 		//right side.
-		motor[rightDrive] = vexRT[Ch3] - vexRT[Ch4] - 5;
-		motor[backRightDrive] = vexRT[Ch3] - vexRT[Ch4] - 5;
+		//motor[rightDrive] = vexRT[Ch3] - vexRT[Ch4] - 4;
+		//motor[backRightDrive] = vexRT[Ch3] - vexRT[Ch4] - 4;
+
+		setLeftRightMoveSpeed(vexRT[Ch3] + (vexRT[Ch4] * 0.8) - 2, vexRT[Ch3] - (vexRT[Ch4] * 0.8) - 2);
 
 		if(abs(vexRT[Ch2]) > 6) {
 			motor[goalHand] = vexRT[Ch2];
 			motor[goalHand2] = -vexRT[Ch2];
 		}
-
 
 		//TODO: button for stack cone
 
