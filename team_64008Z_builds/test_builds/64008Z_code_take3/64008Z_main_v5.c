@@ -502,7 +502,7 @@ void setRotSpeed(int speed) {
 void auto() {
   motor[coneL] = 80;  //check negitave or pos
 	motor[coneR] = 80;
-	wait1Msec(800);  //TODO: check this
+	wait1Msec(1000);  //TODO: check this
 	motor[coneL] = 0;
 	motor[coneR] = 0;
 
@@ -514,8 +514,8 @@ void auto() {
 	motor[goalHand2] = -30;
 
 	/*Move Forwards*/
-	setLeftRightMoveSpeed(70, 70);
-	wait1Msec(2500);
+	setLeftRightMoveSpeed(80, 80);
+	wait1Msec(2100);
 	setLeftRightMoveSpeed(0, 0);
 
 	/*Pick Up Goal*/
@@ -531,13 +531,10 @@ void auto() {
 	setLeftRightMoveSpeed(0, 0);
 
 	/*Rotate 180 Degrees*/
-	//gyroTurn(9, 90, 50);
-
-	/*Rotate 180 Degrees*/
-	setRotSpeed(90);
+	setRotSpeed(80);
 	bool exit = false;
 	while(exit == false) {
-		if(abs(SensorValue[gyro]) >= 180 * 8) { setRotSpeed(0); exit = true; }  //180 degrees.
+		if(abs(SensorValue[gyro]) >= 180 * 8 * 1.38) { setRotSpeed(0); exit = true; }  //180 degrees.
 	}
 
 	/*Move To place goal*/
@@ -550,17 +547,23 @@ void auto() {
 	motor[goalHand2] = -127;
 	wait1Msec(1250);
 	motor[goalHand] = 0;
-	motor[goalHand2] = -0;
+	motor[goalHand2] = 0;
 
 	/*Move To place goal*/
 	setLeftRightMoveSpeed(-80, -80);
 	wait1Msec(150);
+
+	motor[goalHand] = 127;
+	motor[goalHand2] = -127;
 
 	setLeftRightMoveSpeed(0, 0);
 	wait1Msec(150);
 
 	setLeftRightMoveSpeed(-127, -127);
 	wait1Msec(300);
+
+	motor[goalHand] = 0;
+	motor[goalHand2] = 0;
 
 	setLeftRightMoveSpeed(0, 0);
 	wait1Msec(150);
@@ -576,7 +579,101 @@ void auto() {
 
 	setLeftRightMoveSpeed(0, 0);
 	wait1Msec(150);
+}
 
+//20 maybe?
+void auto2() {
+  motor[coneL] = 80;  //check negitave or pos
+	motor[coneR] = 80;
+	wait1Msec(1000);  //TODO: check this
+	motor[coneL] = 0;
+	motor[coneR] = 0;
+
+	/*Drop Goal*/
+	motor[goalHand] = 127;
+	motor[goalHand2] = -127;
+	wait1Msec(1250);
+	motor[goalHand] = 30;
+	motor[goalHand2] = -30;
+
+	/*Move Forwards*/
+	setLeftRightMoveSpeed(80, 80);
+	wait1Msec(2100);
+	setLeftRightMoveSpeed(0, 0);
+
+	/*Pick Up Goal*/
+	motor[goalHand] = -127;
+	motor[goalHand2] = 127;
+	wait1Msec(1500);
+	motor[goalHand] = 0;
+	motor[goalHand2] = -0;
+
+	/*pull out*/
+	setLeftRightMoveSpeed(-60, -60);
+	wait1Msec(2200);
+	setLeftRightMoveSpeed(0, 0);
+
+	/*Rotate */
+	setRotSpeed(100);
+	bool exit = false;
+	while(exit == false) {
+		if(abs(SensorValue[gyro]) >= 180 * 8 * 0.85) { setRotSpeed(0); exit = true; }  //180 degrees.
+	}
+
+	/*Move To place goal*/
+	setLeftRightMoveSpeed(60, 60);
+	wait1Msec(500);
+	setLeftRightMoveSpeed(0, 0);
+
+	/*Rotate */
+	setRotSpeed(100);
+	bool exit = false;
+	while(exit == false) {
+		if(abs(SensorValue[gyro]) >= 180 * 8 * 1.4) { setRotSpeed(0); exit = true; }  //180 degrees.
+	}
+
+	/*Move To place goal*/
+	setLeftRightMoveSpeed(100, 100);
+	wait1Msec(1200);
+	setLeftRightMoveSpeed(0, 0);
+
+	/*Drop Goal*/
+	motor[goalHand] = 127;
+	motor[goalHand2] = -127;
+	wait1Msec(1250);
+	motor[goalHand] = 0;
+	motor[goalHand2] = 0;
+
+	/*Move To place goal*/
+	setLeftRightMoveSpeed(-90, -90);
+	wait1Msec(150);
+
+	motor[goalHand] = 127;
+	motor[goalHand2] = -127;
+
+	setLeftRightMoveSpeed(-30, -30);
+	wait1Msec(150);
+
+	setLeftRightMoveSpeed(-127, -127);
+	wait1Msec(300);
+
+	motor[goalHand] = 0;
+	motor[goalHand2] = 0;
+
+	setLeftRightMoveSpeed(-40, -40);
+	wait1Msec(150);
+
+	setLeftRightMoveSpeed(-110, -110);
+	wait1Msec(1500);
+
+	setLeftRightMoveSpeed(-10, -10);
+	wait1Msec(150);
+
+	setLeftRightMoveSpeed(-127, -127);
+	wait1Msec(1700);
+
+	setLeftRightMoveSpeed(-10, -10);
+	wait1Msec(150);
 }
 
 //choose type of auto to run
@@ -586,7 +683,7 @@ task autonomous	{
 	//else if(autonType == 1)
 		//runAutoCompTop();
 	//else if(autonType == 2)
-	//runAutoSkills();
+
 
 
 	//rotateTo(dir_right, 900);  //rotate to initial forwards position
@@ -595,8 +692,10 @@ task autonomous	{
 	//waitUntil(drivingComplete == true);  //wait for driving position reached
 
 
-	//writeDebugStreamLine("Done Movement");
+	//runAutoSkills();
 	auto();
+	//auto2
+	//writeDebugStreamLine("Done Movement");
 
 }
 
