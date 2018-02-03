@@ -777,25 +777,25 @@ task usercontrol {
 		/*Claws (negitave is closed)*/
 		if(vexRT[Btn6U] == 1)	{
 			isHoldingClaw = false;
-			//motor[claw] = 127;
+			motor[claw] = 127;
 		} else if (vexRT[Btn6D] == 1) {
 			isHoldingClaw = true;
-			//motor[claw] = -110;
+			motor[claw] = -110;
 		} else {
 			clawClosed = false;
 			//keeps pressure on the cone when picked up.
 			if(isHoldingClaw == true) {
-				//motor[claw] = 0;  //TODO: change value down or up if pressure is wrong.
+				motor[claw] = 0;  //TODO: change value down or up if pressure is wrong.
 			} else {
-				//motor[claw] = 30;
+				motor[claw] = 30;
 			}
 		}
 
 		/*Mini Goal*/  //check polarity
-		if(vexRT[Btn6U] == 1)	{  //up
+		if(vexRT[Btn7R] == 1)	{  //up
 			motor[goalHand2Motor] = -127;
 			miniGoalHoldVal = SensorValue[miniGoalPot];
-		} else if(vexRT[Btn6D] == 1) {  //down
+		} else if(vexRT[Btn7D] == 1) {  //down
 			motor[goalHand2Motor] = 127;
 			miniGoalHoldVal = SensorValue[miniGoalPot];
 		} else if(vexRT[Btn7U] == 1) {  //pickup goal pos
@@ -809,12 +809,12 @@ task usercontrol {
 		//setLeftRightMoveSpeed(vexRT[Ch3], vexRT[Ch2]);
 
 		//left side.
-		motor[leftDrive] = vexRT[Ch3] + vexRT[Ch4];
-  	motor[backBackLeftDrive] = vexRT[Ch3] + vexRT[Ch4];
+		motor[leftDrive] = vexRT[Ch3] + vexRT[Ch4] - 5;
+  	motor[backBackLeftDrive] = vexRT[Ch3] + vexRT[Ch4] - 5;
 
 		//right side.
-		motor[rightDrive] = vexRT[Ch3] - vexRT[Ch4];
-		motor[backRightDrive] = vexRT[Ch3] - vexRT[Ch4];
+		motor[rightDrive] = vexRT[Ch3] - vexRT[Ch4] - 5;
+		motor[backRightDrive] = vexRT[Ch3] - vexRT[Ch4] - 5;
 
 		if(abs(vexRT[Ch2]) > 6) {
 			motor[goalHand] = vexRT[Ch2];
