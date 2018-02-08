@@ -193,7 +193,7 @@ void resetEncoders() {
 	nMotorEncoder[backRightDrive] = 0;
 }
 
-float speedMod=0.24;
+float speedMod=0.23;
 
 float inches;
 float currentInchValue;
@@ -210,7 +210,7 @@ float drivingComplete = false;
 task moveStraightGyro() {
 	float disKp = speedMod; //distance kp.  //was 0.22
 	//if(inches <= 24) { disKp = 0.4; }
-	float gyroKp = 3.0;  //was 2.9
+	float gyroKp = 1.8;  //was 2.9
 
 	float error = 0;
 	float gyroError = 0;
@@ -246,17 +246,16 @@ task moveStraightGyro() {
 		writeDebugStreamLine("speed is %d, error is %d, sideMod is %d", speed, error, sideMod); //DEBUG: this
 
 		// check for completion
-		if (abs(error) > 5) 	// if robot is within 5 degree wheel rotations and timer flag is off
-			//exitLoop = true;	// set boolean to complete while loop
+		if (abs(error) > 8) 	// if robot is within 8 degree wheel rotations and timer flag is off
 			clearTimer(T1);			// start a timer
 
-		if (time1(T1) >= 90)	// if the timer is over 90ms and timer flag is true (3 ticks)
+		if (time1(T1) >= 30)	// if the timer is over 90ms and timer flag is true (3 ticks)
 			exitLoop = true;	// set boolean to complete while loop
 
 		currentInchValue = encAvgLR / (380/2) * mod_wheel_circumference;  //convert to inches?
 
 		ticks++;
-		wait1Msec(20);  //loop speed.  //60hz
+		wait1Msec(20);  //loop speed.  //50hz
 	}
 
 	setLeftRightMoveSpeed(); //turn off motors.
@@ -284,7 +283,7 @@ void startMoveTask(float inches_in, const int negitaveMod_in=dir_forwards, float
 
 /*Gyro Turn*/
 //run PD loop to turn to target deg.
-void rotateTo (int turnDirection, int targetDegrees, int maxPower=115, int minPower=24, int timeOut=2500) {
+void rotateTo (int turnDirection, int targetDegrees, int maxPower=115, int minPower=25, int timeOut=2500) {
 	// initialize PD loop variables
 	float kp = 0.10; // TODO: tune this. still smaller?
 	int error = targetDegrees;
@@ -362,12 +361,12 @@ void rotateTo (int turnDirection, int targetDegrees, int maxPower=115, int minPo
 ///the real autonomous command.
 void runAutoSkills() {
 	miniArmParam = down; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm DOWN
-	wait1Msec(100);  //TODO: check this
+	wait1Msec(400);  //TODO: check this
 
 	armParam = down; startTask(autoMoveGoalArms);  //MAIN GOAL arm DOWN
 	wait1Msec(600);  //TODO: check this
 	drivingComplete = false; startMoveTask(97, dir_forwards, 0);  //start 102.3in FWD
-		waitUntil(currentInchValue >= 50);  //wait for first GOAL picked up
+		waitUntil(currentInchValue >= 48);  //wait for first GOAL picked up
 
 		armParam = up; startTask(autoMoveGoalArms);  //MAIN GOAL arm UP
 		waitUntil(currentInchValue >= 130);  //wait for first GOAL picked up
@@ -383,14 +382,14 @@ void runAutoSkills() {
 
 	rotateTo(dir_right, 150);  //rotate to initial forwards position
 
-	drivingComplete = false; startMoveTask(30, dir_forwards, SensorValue[gyro], 10, 127);  //24in FWD
+	drivingComplete = false; startMoveTask(28, dir_forwards, SensorValue[gyro], 10, 127);  //24in FWD
 	wait1Msec(1500);  //Wait 1500 seconds until robot is STRAIGHT with the BAR.
 
-	miniArmParam = mid; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm DOWN
+	miniArmParam = down; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm DOWN
 	wait1Msec(1000);  //Wait 1000 seconds until GOAL has FALLEN.
 
 	armParam = down; startTask(autoMoveGoalArms);  //MAIN GOAL arm DOWN
-	drivingComplete = false; startMoveTask(-30, dir_backwards, SensorValue[gyro], 1, 125);  //18.9in FWD
+	drivingComplete = false; startMoveTask(30, dir_backwards, SensorValue[gyro], 1, 125);  //18.9in FWD
 	waitUntil(drivingComplete == true);  //wait for driving position reached
 
 	/*30 POINTS*/
@@ -685,6 +684,10 @@ void auto2(int dir) {
 //choose type of auto to run
 task autonomous	{
 	gyroInit();  //TODO: REMOVE THIS. (gets called in the function)
+
+	//drivingComplete = false; startMoveTask(60, dir_forwards, SensorValue[gyro]);  //18.9in FWD
+	//waitUntil(drivingComplete == true);  //wait for driving position reached
+
 	//if(autonType == 0)
 		//runAutoCompBottom();
 	//else if(autonType == 1)
@@ -696,8 +699,6 @@ task autonomous	{
 	/* 1 is left -1 is right */
 	//auto(1);
 	//auto2(1)
-
-	//writeDebugStreamLine("Done Movement");
 }
 
 float armError = 0;
