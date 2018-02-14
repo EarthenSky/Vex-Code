@@ -135,7 +135,7 @@ task autoMoveGoalArms() {
 }
 
 //sensorPotentiometer:
-const int pot_up = 3000;
+const int pot_up = 2800;
 const int pot_down = 1800;
 const int pot_no_ground = 2400;
 
@@ -201,7 +201,7 @@ float currentInchValue;
 int negitaveMod=dir_forwards;
 float gyroInitVal=0;
 
-int maxTimeout=250;
+int maxTimeout=350;
 int maxPower=102;
 int minPower=17;
 
@@ -283,7 +283,7 @@ void startMoveTask(float inches_in, const int negitaveMod_in=dir_forwards, float
 
 /*Gyro Turn*/
 //run PD loop to turn to target deg.
-void rotateTo (int turnDirection, int targetDegrees, int maxPower=115, int minPower=25, int timeOut=2500) {
+void rotateTo (int turnDirection, int targetDegrees, int maxPower=115, int minPower=26, int timeOut=2500) {
 	// initialize PD loop variables
 	float kp = 0.10; // TODO: tune this. still smaller?
 	int error = targetDegrees;
@@ -380,16 +380,16 @@ void runAutoSkills() {
 	drivingComplete = false; startMoveTask(20, dir_forwards, SensorValue[gyro]);  //18.9in FWD
 	waitUntil(drivingComplete == true);  //wait for driving position reached
 
-	rotateTo(dir_right, 150);  //rotate to initial forwards position
+	rotateTo(dir_right, 112);  //rotate to initial forwards position
 
-	drivingComplete = false; startMoveTask(28, dir_forwards, SensorValue[gyro], 10, 127);  //24in FWD
-	wait1Msec(1500);  //Wait 1500 seconds until robot is STRAIGHT with the BAR.
+	drivingComplete = false; startMoveTask(30, dir_forwards, SensorValue[gyro], 10, 127);  //24in FWD
+	wait1Msec(1000);  //Wait 1500 seconds until robot is STRAIGHT with the BAR.
 
 	miniArmParam = down; startTask(autoMoveMiniGoalArms);  //MINI GOAL arm DOWN
 	wait1Msec(1000);  //Wait 1000 seconds until GOAL has FALLEN.
 
 	armParam = down; startTask(autoMoveGoalArms);  //MAIN GOAL arm DOWN
-	drivingComplete = false; startMoveTask(30, dir_backwards, SensorValue[gyro], 1, 125);  //18.9in FWD
+	drivingComplete = false; startMoveTask(30, dir_backwards, SensorValue[gyro], 10, 127);  //18.9in FWD
 	waitUntil(drivingComplete == true);  //wait for driving position reached
 
 	/*30 POINTS*/
