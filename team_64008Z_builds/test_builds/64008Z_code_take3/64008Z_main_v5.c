@@ -29,15 +29,6 @@ const int skills_auton = 2;
 
 /*Auto Type*/
 const int autonType = bot_auton;
-//
-//     ^
-//     |
-//     |
-//
-//     ^
-//     |
-//     |
-//
 // Set this for game type
 
 /*Compo Init*/
