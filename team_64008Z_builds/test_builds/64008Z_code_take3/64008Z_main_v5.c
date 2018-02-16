@@ -11,7 +11,7 @@
 #pragma config(Sensor, dgtl8,  urfOut,         sensorSONAR_inch)
 #pragma config(Sensor, I2C_1,  ,               sensorQuadEncoderOnI2CPort,    , AutoAssign )
 #pragma config(Sensor, I2C_2,  ,               sensorQuadEncoderOnI2CPort,    , AutoAssign )
-#pragma config(Motor,  port1,           goalHand2Motor, tmotorVex393_HBridge, openLoop, reversed)
+#pragma config(Motor,  port1,           claw,          tmotorVex393_HBridge, openLoop, reversed)
 #pragma config(Motor,  port2,           backBackLeftDrive, tmotorVex393HighSpeed_MC29, openLoop, encoderPort, I2C_2)
 #pragma config(Motor,  port3,           backRightDrive, tmotorVex393HighSpeed_MC29, openLoop, reversed, encoderPort, I2C_1)
 #pragma config(Motor,  port4,           miniGoalTwo,   tmotorVex393_MC29, openLoop)
@@ -121,6 +121,7 @@ task autoMoveGoalArms() {
 	} else if(armParam == mid) {
 		while(armParam != stopAutoCorrect) {
 			motor[goalHand] = capMinMax(0.2 * (1100 - SensorValue[largeGoalPot]) + 5, 2, 80);
+			motor[goalHand2] = capMinMax(-0.2 * (1100 - SensorValue[largeGoalPot]) + 5, 2, 80);
 			wait1Msec(20);
 		}
 	} else if(armParam == up) {
@@ -132,6 +133,7 @@ task autoMoveGoalArms() {
   armParam = completed;
 
 	motor[goalHand] = 0;
+	motor[goalHand2] = 0;
 }
 
 //sensorPotentiometer:
@@ -146,21 +148,21 @@ task autoMoveMiniGoalArms() {
 
 	if(miniArmParam == up) {
 		while(miniArmParam != stopAutoCorrect) {
-			motor[goalHand2Motor] = -0.3 * (pot_up - SensorValue[miniGoalPot]);
+			//motor[goalHand2Motor] = -0.3 * (pot_up - SensorValue[miniGoalPot]);
 			motor[miniGoalTwo] = 0.3 * (pot_up - SensorValue[miniGoalPot]);
 			wait1Msec(20);
 		}
 	}
 	else if(miniArmParam == down) {
 		while(miniArmParam != stopAutoCorrect) {
-			motor[goalHand2Motor] = -0.3 * (pot_down - SensorValue[miniGoalPot]);
+			//motor[goalHand2Motor] = -0.3 * (pot_down - SensorValue[miniGoalPot]);
 			motor[miniGoalTwo] = 0.3 * (pot_down - SensorValue[miniGoalPot]);
 			wait1Msec(20);
 		}
 	}
 	else if (miniArmParam == mid) {
 		while(miniArmParam != stopAutoCorrect) {
-			motor[goalHand2Motor] = -0.3 * (pot_no_ground - SensorValue[miniGoalPot]);
+			//motor[goalHand2Motor] = -0.3 * (pot_no_ground - SensorValue[miniGoalPot]);
 			motor[miniGoalTwo] = 0.3 * (pot_no_ground - SensorValue[miniGoalPot]);
 			wait1Msec(20);
 		}
@@ -168,7 +170,7 @@ task autoMoveMiniGoalArms() {
 
   miniArmParam = completed;
 
-	motor[goalHand2Motor] = 0;
+	//motor[goalHand2Motor] = 0;
 }
 
 //sets the speed of the left and right sides of the drive.  Empty is not moving.
@@ -269,7 +271,7 @@ task moveStraightGyro() {
 }
 
 //init a drive task and start it
-void startMoveTask(float inches_in, const int negitaveMod_in=dir_forwards, float gyroInitVal_in=SensorValue[gyro], float speedMod_in=0.24, int maxTimeout_in=275, int maxPower_in=102, int minPower_in=17) {
+void startMoveTask(float inches_in, const int negitaveMod_in=dir_forwards, float gyroInitVal_in=SensorValue[gyro], float speedMod_in=0.28, int maxTimeout_in=275, int maxPower_in=102, int minPower_in=17) {
 	inches = inches_in;
 	negitaveMod = negitaveMod_in;
 	gyroInitVal = gyroInitVal_in;
@@ -283,7 +285,7 @@ void startMoveTask(float inches_in, const int negitaveMod_in=dir_forwards, float
 
 /*Gyro Turn*/
 //run PD loop to turn to target deg.
-void rotateTo (int turnDirection, int targetDegrees, int maxPower=115, int minPower=26, int timeOut=2500) {
+void rotateTo (int turnDirection, int targetDegrees, int maxPower=115, int minPower=23, int timeOut=2500) {
 	// initialize PD loop variables
 	float kp = 0.10; // TODO: tune this. still smaller?
 	int error = targetDegrees;
@@ -681,6 +683,43 @@ void auto2(int dir) {
 	wait1Msec(150);
 }
 
+void newCompAuto() {
+	armParam = down; startTask(autoMoveGoalArms);  //MAIN GOAL arm DOWN
+	wait1Msec(400);
+
+	drivingComplete = false; startMoveTask(34, dir_forwards, SensorValue[gyro]);  //FWD
+	waitUntil(drivingComplete == true);  //wait for driving position reached
+
+	armParam = up; startTask(autoMoveGoalArms);  //MAIN GOAL arm UP
+	wait1Msec(600);
+
+	rotateTo(dir_right, 1800 * 1.00);  //rotate to correct position
+
+	drivingComplete = false; startMoveTask(34, dir_forwards, SensorValue[gyro]);  //FWD
+	waitUntil(drivingComplete == true);  //wait for driving position reached
+
+	armParam = down; startTask(autoMoveGoalArms);  //MAIN GOAL arm DOWN
+	wait1Msec(400);
+
+	drivingComplete = false; startMoveTask(6, dir_backwards, SensorValue[gyro]);  //BWD
+	waitUntil(drivingComplete == true);  //wait for driving position reached
+
+	wait1Msec(100);
+
+	armParam = up; startTask(autoMoveGoalArms);  //MAIN GOAL arm UP
+	wait1Msec(400);
+
+	//**TEN POINTS**//
+
+	rotateTo(dir_right, 2700 * 1.00);  //rotate to correct position
+
+	drivingComplete = false; startMoveTask(8, dir_forwards, SensorValue[gyro]);  //FWD
+	waitUntil(drivingComplete == true);  //wait for driving position reached
+
+	rotateTo(dir_right, 3600);  //rotate to correct position
+
+}
+
 //choose type of auto to run
 task autonomous	{
 	gyroInit();  //TODO: REMOVE THIS. (gets called in the function)
@@ -694,7 +733,8 @@ task autonomous	{
 		//runAutoCompTop();
 	//else if(autonType == 2)
 
-	runAutoSkills();
+	//runAutoSkills();
+	newCompAuto();
 
 	/* 1 is left -1 is right */
 	//auto(1);
@@ -778,36 +818,36 @@ task usercontrol {
 
 		/*Claws (negitave is closed)*/
 		if(vexRT[Btn6U] == 1)	{
-			//isHoldingClaw = false;
-			//motor[claw] = 127;
+			isHoldingClaw = false;
+			motor[claw] = 127;
 		} else if (vexRT[Btn6D] == 1) {
-			//isHoldingClaw = true;
-			//motor[claw] = -110;
+			isHoldingClaw = true;
+			motor[claw] = -110;
 		} else {
-			//clawClosed = false;
+			clawClosed = false;
 			//keeps pressure on the cone when picked up.
 			if(isHoldingClaw == true) {
-				//motor[claw] = -30;  //TODO: change value down or up if pressure is wrong.
+				motor[claw] = -30;  //TODO: change value down or up if pressure is wrong.
 			} else {
-				//motor[claw] = 0;
+				motor[claw] = 0;
 			}
 		}
 
 		/*Mini Goal*/  //check polarity
 		if(vexRT[Btn7R] == 1)	{  //up
-			motor[goalHand2Motor] = -127;
+			//motor[goalHand2Motor] = -127;
 			motor[miniGoalTwo] = -127;
 			miniGoalHoldVal = SensorValue[miniGoalPot];
 		} else if(vexRT[Btn7D] == 1) {  //down
-			motor[goalHand2Motor] = 127;
+			//motor[goalHand2Motor] = 127;
 			motor[miniGoalTwo] = 127;
 			miniGoalHoldVal = SensorValue[miniGoalPot];
 		} else if(vexRT[Btn7U] == 1) {  //pickup goal pos
 			miniGoalHoldVal = 1800;
-			motor[goalHand2Motor] = (miniGoalHoldVal - SensorValue[miniGoalPot]) * -0.3;
+			//motor[goalHand2Motor] = (miniGoalHoldVal - SensorValue[miniGoalPot]) * -0.3;
 			motor[miniGoalTwo] = (miniGoalHoldVal - SensorValue[miniGoalPot]) * -0.3;
 		} else {  //stay at pos
-			motor[goalHand2Motor] = (miniGoalHoldVal - SensorValue[miniGoalPot]) * -0.3;
+			//motor[goalHand2Motor] = (miniGoalHoldVal - SensorValue[miniGoalPot]) * -0.3;
 			motor[miniGoalTwo] = (miniGoalHoldVal - SensorValue[miniGoalPot]) * -0.3;
 		}
 
