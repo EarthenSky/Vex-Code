@@ -45,11 +45,6 @@ const int dir_backwards = -1;
 const int dir_left = 1;
 const int dir_right = -1;
 
-const int pos_bot = 0;
-const int pos_mid = 1;
-const int pos_top = 2;
-
-const float mod_degrees = 10;  //multiply this with degrees to get
 const float mod_wheel_circumference = 4 * 3.14159265358979; //in inches.
 const int task_time_limit = 2500;  //2.5s
 
@@ -138,14 +133,14 @@ void resetEncoders() {
 }
 
 /*Drive *TASK* Variables*/
-float speedMod=0.23;
+float speedMod=0.27;
 float inches;
 float currentInchValue;
 int negitaveMod=dir_forwards;
 float gyroInitVal=0;
 int maxTimeout=350;
 int maxPower=102;
-int minPower=17;
+int minPower=19;
 float drivingComplete = false;
 
 // The drive task works by slowing down as it gets closer to it's end point
@@ -179,17 +174,17 @@ task moveStraightGyro() {
     gyroError = gyroInitVal - SensorValue[gyro];
     sideMod = gyroError * gyroKp;
 
-    writeDebugStreamLine("speed is %d, error is %d, sideMod is %d, enc is %d, gyroerr is %d", speed, error, sideMod, nMotorEncoder[backRightDrive], gyroError); //DEBUG: this
+    //writeDebugStreamLine("speed is %d, error is %d, sideMod is %d, enc is %d, gyroerr is %d", speed, error, sideMod, nMotorEncoder[backRightDrive], gyroError); //DEBUG: this
 
     //keep speed between min and max power.
 		speed = capMinMax(speed, minPower, maxPower);
 
 		setLeftRightMoveSpeed((speed - sideMod * (speed/127)) * negitaveMod, (speed + sideMod * (speed/127)) * negitaveMod);  //move forwards
 
-		writeDebugStreamLine("speed is %d, error is %d, sideMod is %d", speed, error, sideMod); //DEBUG: this
+		//writeDebugStreamLine("speed is %d, error is %d, sideMod is %d", speed, error, sideMod); //DEBUG: this
 
 		// check for completion
-		if (abs(error) > 8) 	// if robot is within 8 degree wheel rotations and timer flag is off
+		if (abs(error) > 12) 	// if robot is within 8 degree wheel rotations and timer flag is off
 			clearTimer(T1);			// start a timer
 
 		if (time1(T1) >= 30)	// if the timer is over 90ms and timer flag is true (3 ticks)
@@ -213,7 +208,7 @@ task moveStraightGyro() {
 
 
 // This calls the drive *TASK* (not function)
-void startMoveTask(float inches_in, const int negitaveMod_in=dir_forwards, float gyroInitVal_in=SensorValue[gyro], float speedMod_in=0.28, int maxTimeout_in=275, int maxPower_in=102, int minPower_in=17) {
+void startMoveTask(float inches_in, const int negitaveMod_in=dir_forwards, float gyroInitVal_in=SensorValue[gyro], float speedMod_in=0.278, int maxTimeout_in=275, int maxPower_in=92, int minPower_in=18) {
 	inches = inches_in;
 	negitaveMod = negitaveMod_in;
 	gyroInitVal = gyroInitVal_in;
@@ -227,9 +222,9 @@ void startMoveTask(float inches_in, const int negitaveMod_in=dir_forwards, float
 
 /*Gyro Turn*/
 //run PD loop to turn to target degree.
-void _rotateTo (int turnDirection, int targetDegrees, int maxPower=115, int minPower=23, int timeOut=2500) {
+void _rotateTo (int turnDirection, int targetDegrees, int maxPower=115, int minPower=21, int timeOut=2500) {
 	// initialize PD loop variables
-	float kp = 0.095; // TODO: tune this. still smaller?  //used to be 0.100
+	float kp = 0.09; // TODO: tune this. still smaller?  //used to be 0.100
 	int error = targetDegrees;
 	int drivePower = 0;
 
@@ -253,7 +248,7 @@ void _rotateTo (int turnDirection, int targetDegrees, int maxPower=115, int minP
 		error = targetReading - SensorValue[gyro]; 	// calculate error
 		drivePower = error * kp;	// calculate PD loop output  //speed
 
-		writeDebugStreamLine("error -> %d, gyro -> %d", error, SensorValue[gyro]);  //DEBUG: this
+		//writeDebugStreamLine("error -> %d, gyro -> %d", error, SensorValue[gyro]);  //DEBUG: this
 
 		//keep speed between min and max power.
 		drivePower = capMinMax(drivePower, minPower, maxPower);
@@ -299,20 +294,20 @@ void newCompAuto() {
 
 	_rotateTo(dir_right, 1800 * 1.00);  //rotate to correct position
 
-	drivingComplete = false; startMoveTask(34 - 1, dir_forwards, 1800 * 1.00);  //FWD  //TODO: test this thing
+	drivingComplete = false; startMoveTask(34 - 3, dir_forwards, SensorValue[gyro]);  //FWD  //TODO: test this thing
     waitUntil(drivingComplete == true);  //wait for driving position reached
 
   //Let go of goal ###########################################
-	armParam = down; startTask(autoMoveGoalArms);  //MAIN GOAL arm DOWN
-	wait1Msec(400);
+	//armParam = down; startTask(autoMoveGoalArms);  //MAIN GOAL arm DOWN
+	//wait1Msec(400);
 
-	drivingComplete = false; startMoveTask(6, dir_backwards, SensorValue[gyro]);  //BWD
+	drivingComplete = false; startMoveTask(5, dir_backwards, SensorValue[gyro]);  //BWD
     //waitUntil(drivingComplete == true);  //wait for driving position reached
 
-	  wait1Msec(100);  //TODO: TUNE THIS
+	  //wait1Msec(800);  //TODO: TUNE THIS
 
-	  armParam = up; startTask(autoMoveGoalArms);  //MAIN GOAL arm UP
-	  wait1Msec(400);
+	  //armParam = up; startTask(autoMoveGoalArms);  //MAIN GOAL arm UP
+	  //wait1Msec(400);
 
     waitUntil(drivingComplete == true);  //make sure driving is stopped
 
@@ -320,36 +315,36 @@ void newCompAuto() {
 
 	_rotateTo(dir_right, 2700 * 1.00);  //rotate to correct position
 
-	drivingComplete = false; startMoveTask(24, dir_forwards, SensorValue[gyro]);  //TODO: TUNING
+	drivingComplete = false; startMoveTask(27, dir_forwards, SensorValue[gyro]);  //TODO: TUNING
     waitUntil(drivingComplete == true);  //wait for driving position reached
 
 	_rotateTo(dir_right, 3600 * 1.00);  //rotate to correct position
 
   armParam = down; startTask(autoMoveGoalArms);  //MAIN GOAL arm DOWN
-	wait1Msec(400);
+	wait1Msec(700);
 
-  drivingComplete = false; startMoveTask(30, dir_forwards, SensorValue[gyro]);  //TODO: TUNING
+  drivingComplete = false; startMoveTask(25, dir_forwards, SensorValue[gyro]);  //TODO: TUNING
     waitUntil(drivingComplete == true);  //wait for driving position reached
 
   armParam = up; startTask(autoMoveGoalArms);  //MAIN GOAL arm UP
-	wait1Msec(600);
+	wait1Msec(700);
 
-	_rotateTo(dir_left, 1800 * 1.00);  //rotate to correct position
+	_rotateTo(dir_right, (1800 + 3600) * 1.00);  //rotate to correct position
 
-	drivingComplete = false; startMoveTask(30 - 1, dir_forwards, 1800 * 1.00);  //FWD  //TODO: test this thing
+	drivingComplete = false; startMoveTask(34, dir_forwards, SensorValue[gyro]);  //FWD  //TODO: test this thing
     waitUntil(drivingComplete == true);  //wait for driving position reached
 
   //Let go of goal ###########################################
-  armParam = down; startTask(autoMoveGoalArms);  //MAIN GOAL arm DOWN
-	wait1Msec(400);
+  //armParam = down; startTask(autoMoveGoalArms);  //MAIN GOAL arm DOWN
+	//wait1Msec(400);
 
-	drivingComplete = false; startMoveTask(6, dir_backwards, SensorValue[gyro]);  //BWD
+	drivingComplete = false; startMoveTask(2, dir_backwards, SensorValue[gyro]);  //BWD
     //waitUntil(drivingComplete == true);  //wait for driving position reached
 
-	  wait1Msec(100);  //TODO: TUNE THIS
+	  //wait1Msec(100);  //TODO: TUNE THIS
 
-	  armParam = up; startTask(autoMoveGoalArms);  //MAIN GOAL arm UP
-	  wait1Msec(400);
+	  //armParam = up; startTask(autoMoveGoalArms);  //MAIN GOAL arm UP
+	  //wait1Msec(400);
 
     waitUntil(drivingComplete == true);  //make sure driving is stopped
 
@@ -357,7 +352,7 @@ void newCompAuto() {
 
   _rotateTo(dir_right, 2700 * 1.00);  //rotate to correct position
 
-  drivingComplete = false; startMoveTask(4, dir_forwards, SensorValue[gyro]);  //TODO: TUNING
+  drivingComplete = false; startMoveTask(10, dir_forwards, SensorValue[gyro]);  //TODO: TUNING
     waitUntil(drivingComplete == true);  //wait for driving position reached
 
   _rotateTo(dir_right, 3150 * 1.00);  //rotate to correct position
@@ -365,16 +360,16 @@ void newCompAuto() {
   armParam = down; startTask(autoMoveGoalArms);  //MAIN GOAL arm DOWN
 	wait1Msec(400);
 
-  drivingComplete = false; startMoveTask(30, dir_forwards, SensorValue[gyro]);  //TODO: TUNING
+  drivingComplete = false; startMoveTask(36, dir_forwards, SensorValue[gyro]);  //TODO: TUNING
     waitUntil(drivingComplete == true);  //wait for driving position reached
 
   armParam = up; startTask(autoMoveGoalArms);  //MAIN GOAL arm UP
-	wait1Msec(1000);
+	wait1Msec(1200);
 
-  drivingComplete = false; startMoveTask(30, dir_backwards, SensorValue[gyro]);  //BWD  //TODO: TUNING
+  drivingComplete = false; startMoveTask(37, dir_backwards, SensorValue[gyro], 0.277, 275, 65);  //BWD  //TODO: TUNING
     waitUntil(drivingComplete == true);  //wait for driving position reached
 
-  _rotateTo(dir_right, (900 + 3600) * 1.00);  //rotate to correct position
+  _rotateTo(dir_right, (900 + 3600) * 1.00, 90);  //rotate to correct position
 
   drivingComplete = false; startMoveTask(16, dir_forwards, SensorValue[gyro]);  //TODO: TUNING
     waitUntil(drivingComplete == true);  //wait for driving position reached
@@ -388,7 +383,7 @@ void newCompAuto() {
   armParam = down; startTask(autoMoveGoalArms);  //MAIN GOAL arm DOWN
 	wait1Msec(400);
 
-	drivingComplete = false; startMoveTask(6, dir_backwards, SensorValue[gyro]);  //BWD
+	drivingComplete = false; startMoveTask(16, dir_backwards, SensorValue[gyro]);  //BWD
     //waitUntil(drivingComplete == true);  //wait for driving position reached
 
 	  wait1Msec(100);  //TODO: TUNE THIS
@@ -399,6 +394,9 @@ void newCompAuto() {
     waitUntil(drivingComplete == true);  //make sure driving is stopped
 
   ////////////////////////**30 POINTS**////////////////////////
+
+  drivingComplete = false; startMoveTask(30, dir_backwards, SensorValue[gyro]);  //BWD
+   waitUntil(drivingComplete == true);  //wait for driving position reached
 
   _rotateTo(dir_left, (3600 + 2700) * 1.00);  //rotate to correct position
 
