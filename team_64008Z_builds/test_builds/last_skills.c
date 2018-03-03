@@ -182,10 +182,10 @@ task moveStraightGyro() {
 		//writeDebugStreamLine("speed is %d, error is %d, sideMod is %d", speed, error, sideMod); //DEBUG: this
 
 		// check for completion
-		if (abs(error) > 12) 	// if robot is within 8 degree wheel rotations and timer flag is off
+		if (abs(error) > 12) 	// if robot is within 12 degree wheel rotations and timer flag is off
 			clearTimer(T1);			// start a timer
 
-		if (time1(T1) >= 30)	// if the timer is over 90ms and timer flag is true (3 ticks)
+		if (time1(T1) >= 30)	// if the timer is over 30ms and timer flag is true (2 ticks)
 			exitLoop = true;	// set boolean to complete while loop
 
 		currentInchValue = encAvgLR / (380/2) * mod_wheel_circumference;  //convert to inches?
@@ -255,10 +255,10 @@ void _rotateTo (int turnDirection, int targetDegrees, int maxPower=115, int minP
 		setLeftRightMoveSpeed(-drivePower, drivePower);
 
 		// check for finish
-		if (abs(error) > 10) 	// if robot is within 1 degree of target and timer flag is off
+		if (abs(error) > 15) 	// if robot is within 1.5 degrees of target and timer flag is off
 			clearTimer(T1);			// start a timer
 
-		if (time1(T1) > 100)	// if the timer is over 100ms and timer flag is true
+		if (time1(T1) > 30)	// if the timer is over 30ms and timer flag is true
 			atTarget = true;	// set boolean to complete while loop
 
 		wait1Msec(16);  //let motors update. (used to be 20ms)
