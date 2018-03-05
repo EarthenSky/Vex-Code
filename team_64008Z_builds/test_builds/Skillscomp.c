@@ -47,11 +47,6 @@ const int dir_backwards = -1;
 const int dir_left = 1;
 const int dir_right = -1;
 
-const int pos_bot = 0;
-const int pos_mid = 1;
-const int pos_top = 2;
-
-const float mod_degrees = 10;  //multiply this with degrees to get
 const float mod_wheel_circumference = 4 * 3.14159265358979; //in inches.
 const int task_time_limit = 2500;  //2.5s
 
@@ -251,10 +246,10 @@ void _rotateTo (int turnDirection, int targetDegrees, int maxPower=90, int minPo
 	int targetReading = 0;  //no relative rotation pls, thanks.
 
 	// get gyroscope target reading
-	if (turnDirection >= 1)
-		targetReading += abs(targetDegrees);
-	else if (turnDirection <= 0)
-		targetReading -= abs(targetDegrees);
+	// (turnDirection >= 1)
+		//targetReading += abs(targetDegrees);
+	//else if (turnDirection <= 0)
+	targetReading -= targetDegrees;
 
 	// run motors until target is within 1 degree certainty
 	while (!atTarget && (time1[T2] < timeOut)) {
@@ -381,7 +376,7 @@ void other_twenty() {
 
 	drivingComplete = false; startMoveTask(96, dir_forwards, SensorValue[gyro]);  //TODO: TUNING
 
-		waitUntil(currentInchValue >= 90)
+		waitUntil(currentInchValue >= 90);
 		armParam = up; startTask(autoMoveGoalArms);  //MAIN GOAL arm DOWN
 
 		waitUntil(drivingComplete == true);  //wait for driving position reached
